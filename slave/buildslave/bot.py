@@ -119,7 +119,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         doesn't do much, but masters call it so it's still here."""
         pass
 
-    def remote_startCommand(self, stepref, stepId, command, args):
+    def remote_startCommand(self, stepref, stepId, command, args, manifest):
         """
         This gets invoked by L{buildbot.process.step.RemoteCommand.start}, as
         part of various master-side BuildSteps, to start various commands
@@ -138,9 +138,16 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             factory = registry.getFactory(command)
         except KeyError:
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
+
+        if manifest:
+            log.msg(" build manifest %s" % manifest)
+            if 'command' in args:
+                log.msg(" this is the command %s" % args['command'])
+
         self.command = factory(self, stepId, args)
 
-        log.msg(" startCommand:%s [id %s]" % (command,stepId))
+        log.msg(" startCommand:%s [id %s]" % (command, stepId))
+
         self.remoteStep = stepref
         self.remoteStep.notifyOnDisconnect(self.lostRemoteStep)
         d = self.command.doStart()
