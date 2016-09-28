@@ -29,6 +29,7 @@ from buildslave.pbutil import ReconnectingPBClientFactory
 from buildslave.commands import registry, base
 from buildslave import monkeypatches
 from datetime import datetime
+import logstashgen
 
 class UnknownCommand(pb.Error):
     pass
@@ -179,14 +180,11 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         except KeyError:
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
 
-        if manifest:
-            log.msg(" build manifest %s" % manifest)
-            if 'command' in args:
-                log.msg(" this is the command %s" % args['command'])
-
         self.command = factory(self, stepId, args)
-
-        manifest['logFileName'] = self._createCommandLogFile(manifest)
+        # To have logs use the manifest as metadata, we must convert the manifest to a logstash config
+        if manifest:
+            manifest['logFileName'] = self._createCommandLogFile(manifest)
+            logstashgen.generate_logstash_config(manifest, command)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
 
