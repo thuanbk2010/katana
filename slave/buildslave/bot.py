@@ -120,14 +120,12 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if commandArg:
             commandLogFileName = commandLogFileName + "_" + commandArg
 
-        logfile = os.path.join(self.bot.logsdir, commandLogFileName)
-        self.commandLogFile = open(logfile, 'w')
+        commandLogFilePath = os.path.join(self.bot.logsdir, commandLogFileName)
+        self.commandLogFile = open(commandLogFilePath, 'w')
         log.msg("Created logfile %s" % commandLogFileName)
-        return commandLogFileName
+        return commandLogFilePath
 
     def saveCommandOutputToLog(self, logname, data):
-        log.msg("logname %s" % logname)
-        log.msg("logdata %s" % data)
         if self.commandLogFile:
             self.commandLogFile.write(data)
 
@@ -181,9 +179,9 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
 
         self.command = factory(self, stepId, args)
-        # To have logs use the manifest as metadata, we must convert the manifest to a logstash config
+
         if manifest:
-            manifest['logFileName'] = self._createCommandLogFile(manifest)
+            manifest['logFilePath'] = self._createCommandLogFile(manifest)
             logstashgen.generate_logstash_config(manifest, command)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
