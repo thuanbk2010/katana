@@ -82,6 +82,9 @@ class FakeBuildStatus(Mock):
         step_status = Mock()
         step_status.finished = None
         return step_status
+
+    def getSourceStamps(self):
+        return []
         
 class FakeBuilderStatus:
     implements(interfaces.IBuilderStatus)

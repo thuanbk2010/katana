@@ -359,8 +359,8 @@ class TestMailNotifier(unittest.TestCase):
             
         ss1 = FakeSource(revision='111222', codebase='testlib1')
         ss2 = FakeSource(revision='222333', codebase='testlib2')
-        build.getSourceStamps.return_value = [ss1, ss2]
-        
+        build.getSourceStamps = lambda: [ss1, ss2]
+
         mn.buildsetFinished(99, FAILURE)
 
         self.assertTrue('revision' in self.passedAttrs, "No revision entry found in attrs")
@@ -426,7 +426,7 @@ class TestMailNotifier(unittest.TestCase):
         mn.master_status.getBuilder = fakeGetBuilder
             
         ss1 = FakeSource(revision='111222', codebase='testlib1')
-        build.getSourceStamps.return_value = [ss1]
+        build.getSourceStamps = lambda: [ss1]
         
         mn.buildsetFinished(99, FAILURE)
 
@@ -591,7 +591,7 @@ class TestMailNotifier(unittest.TestCase):
             b.builder = bldr
             b.results = 0
             ss = Mock(name='ss')
-            b.getSourceStamps.return_value = [ss]
+            b.getSourceStamps = lambda: [ss]
             ss.patch = None
             ss.changes = []
             b.getLogs.return_value = [ l ]
