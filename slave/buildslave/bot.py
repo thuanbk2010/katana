@@ -112,7 +112,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
     def _createCommandLogFile(self, manifest):
         commandName, commandArg = self._getCommandInfo()
-        commandLogFileName = 'step{}_{}_{}.log'.format(
+        commandLogFileName = 'step{}_{}_{}'.format(
                 manifest['stepNumber'],
                 datetime.utcnow().strftime(LOG_DATE_FORMAT),
                 commandName)
@@ -120,9 +120,9 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if commandArg:
             commandLogFileName = commandLogFileName + "_" + commandArg
 
-        commandLogFilePath = os.path.join(self.bot.logsdir, commandLogFileName)
+        commandLogFilePath = os.path.join(self.bot.logsdir, commandLogFileName+".log")
         self.commandLogFile = open(commandLogFilePath, 'w')
-        log.msg("Created logfile %s" % commandLogFileName)
+        log.msg("Created logfile %s" % commandLogFilePath)
         return commandLogFilePath
 
     def saveCommandOutputToLog(self, logname, data):
