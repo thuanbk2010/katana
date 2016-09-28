@@ -125,7 +125,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         log.msg("Created logfile %s" % commandLogFilePath)
         return commandLogFilePath
 
-    def saveCommandOutputToLog(self, logname, data):
+    def saveCommandOutputToLog(self, data):
         if self.commandLogFile:
             self.commandLogFile.write(data)
 
@@ -158,7 +158,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         doesn't do much, but masters call it so it's still here."""
         pass
 
-    def remote_startCommand(self, stepref, stepId, command, args, manifest):
+    def remote_startCommand(self, stepref, stepId, command, args, manifest=None):
         """
         This gets invoked by L{buildbot.process.step.RemoteCommand.start}, as
         part of various master-side BuildSteps, to start various commands
