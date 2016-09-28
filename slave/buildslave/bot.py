@@ -28,9 +28,12 @@ import buildslave
 from buildslave.pbutil import ReconnectingPBClientFactory
 from buildslave.commands import registry, base
 from buildslave import monkeypatches
+from datetime import datetime
 
 class UnknownCommand(pb.Error):
     pass
+
+LOG_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S (UTC)'
 
 class SlaveBuilder(pb.Referenceable, service.Service):
 
@@ -61,6 +64,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
     def __init__(self, name):
         #service.Service.__init__(self) # Service has no __init__ method
+        self.commandLogFile = None
         self.setName(name)
 
     def __repr__(self):
@@ -93,6 +97,42 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             if bslave:
                 bf = bslave.bf
                 bf.activity()
+
+    # TODO: check if there is another way of getting command parameters
+    def _getCommandInfo(self):
+        commandFirstArg = None
+        if 'command' in self.command.args:
+            commandName = self.command.args['command'][0] if self.command.args['command'] > 0 else None
+            commandFirstArg = self.command.args['command'][1] if self.command.args['command'] > 1 else None
+        else:
+            commandName = self.command.header
+
+        return commandName, commandFirstArg
+
+    def _createCommandLogFile(self, manifest):
+        commandName, commandArg = self._getCommandInfo()
+        commandLogFileName = 'step{}_{}_{}.log'.format(
+                manifest['stepNumber'],
+                datetime.utcnow().strftime(LOG_DATE_FORMAT),
+                commandName)
+
+        if commandArg:
+            commandLogFileName = commandLogFileName + "_" + commandArg
+
+        logfile = os.path.join(self.bot.logsdir, commandLogFileName)
+        self.commandLogFile = open(logfile, 'w')
+        log.msg("Created logfile %s" % commandLogFileName)
+        return commandLogFileName
+
+    def saveCommandOutputToLog(self, logname, data):
+        log.msg("logname %s" % logname)
+        log.msg("logdata %s" % data)
+        if self.commandLogFile:
+            self.commandLogFile.write(data)
+
+    def closeCommandLogFile(self):
+        if self.commandLogFile:
+            self.commandLogFile.close()
 
     def remote_setMaster(self, remote):
         self.remote = remote
@@ -145,6 +185,8 @@ class SlaveBuilder(pb.Referenceable, service.Service):
                 log.msg(" this is the command %s" % args['command'])
 
         self.command = factory(self, stepId, args)
+
+        manifest['logFileName'] = self._createCommandLogFile(manifest)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
 
@@ -219,6 +261,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
     # this is fired by the Deferred attached to each Command
     def commandComplete(self, failure):
+        self.closeCommandLogFile()
         if failure:
             log.msg("SlaveBuilder.commandFailed", self.command)
             log.err(failure)
@@ -259,9 +302,14 @@ class Bot(pb.Referenceable, service.MultiService):
         self.usePTY = usePTY
         self.unicode_encoding = unicode_encoding or sys.getfilesystemencoding() or 'ascii'
         self.builders = {}
+        self.logsdir = os.path.join(self.basedir, 'logs')
 
     def startService(self):
         assert os.path.isdir(self.basedir)
+
+        if not os.path.isdir(self.logsdir):
+            os.makedirs(self.logsdir)
+
         service.MultiService.startService(self)
 
     def remote_getCommands(self):

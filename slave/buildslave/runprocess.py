@@ -627,6 +627,7 @@ class RunProcess:
         while self.buffered:
             # Grab the next bits from the buffer
             logname, data = self.buffered.popleft()
+            self.builder.saveCommandOutputToLog(logname, data)
 
             # If this log is different than the last one, then we have to send
             # out the message so far.  This is because the message is
