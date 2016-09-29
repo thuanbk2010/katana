@@ -1,8 +1,41 @@
 /*global define, Handlebars */
-define(['elasticsearch'], function(require) {
-  "use strict";
+define(['elasticsearch', 'immutable'], function(require) {
+  //"use strict";
 
   var client, defaultSearchQuery;
+  //var must = [{ "match": { "path": settings.path } }]
+  //var should = [{ "wildcard": { "message": "*" } }]
+
+  var queries = {
+    match_fields: function(must, should) {
+      return {
+        "query": {
+          "constant_score": {
+            "query": {
+              "bool": {
+                "must": must || [],
+                "should": should || []
+              }
+            }
+          }
+        }
+      }
+    },
+    get_all: {
+      "query": {
+        "match_all": {}
+      }
+    },
+    match_all: function(value) {
+      return {
+        "query": {
+          "match": {
+            "_all": value
+          }
+        }
+      }
+    },
+  }
 
   function connect(connection, settings) {
     client = prepareElasticSearch(connection)
@@ -14,25 +47,11 @@ define(['elasticsearch'], function(require) {
       console.error('Invalid query settings.');
     }
 
-    //var must = [{ "match": { "path": settings.path } }]
-    var should = [{ "wildcard": { "message": "*" } }]
-
     return {
       index: settings.index,
       from: (settings.pageNum - 1) * settings.perPage,
       size: settings.perPage,
-      body: {
-        "query": {
-          "constant_score": {
-            "query": {
-              "bool": {
-                // "must": must,
-                "should": should
-              }
-            }
-          }
-        }
-      }
+      body: queries.match_all
     }
   }
 
@@ -97,9 +116,32 @@ define(['elasticsearch'], function(require) {
       });
   }
 
-  function filterMessage(value, renderCallback) {
+  function getSearchQuery(value) {
+    if (!value) {
+      return queries.get_all
+    }
+    if (value.indexOf(':') === -1) {
+      return queries.match_all(value)
+    }
+    var terms = value.split('|');
+    var should = [];
+    terms.forEach(function(value) {
+      var field = value.split(':');
+      if (field.length === 2) {
+
+        var jsonVariable = {};
+        jsonVariable[field[0]] = field[1]
+        should.push({ "wildcard": jsonVariable });
+      }
+    })
+
+    return queries.match_fields([], should)
+  }
+
+  function filterAll(value, renderCallback) {
     var searchQuery = defaultSearchQuery
-    searchQuery.body.query.constant_score.query.bool.should[0].wildcard.message = value.toLowerCase() || "*";
+
+    searchQuery.body = getSearchQuery(value)
     searchQuery.from = 0;
 
     client.search(searchQuery)
@@ -126,7 +168,7 @@ define(['elasticsearch'], function(require) {
     _prepareElasticSearch: prepareElasticSearch,
     _prepareSearchQuery: prepareSearchQuery,
     connect: connect,
-    filterMessage: filterMessage,
+    filterAll: filterAll,
     getMapping: getMapping,
     getPage: getPage,
     nextPage: nextPage,
@@ -134,5 +176,4 @@ define(['elasticsearch'], function(require) {
   }
 
   return methods
-
 })

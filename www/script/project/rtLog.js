@@ -18,7 +18,7 @@ define(function(require) {
   var loadingIcon = $('.log-loading-icon');
 
   var settings = {
-    index: "event_buildlogs",
+    index: instantJSON.global.elasticIndex || "buildlog",
     build: null,
     bilder: null,
     steps: null,
@@ -35,7 +35,7 @@ define(function(require) {
       es.connect(connection, settings);
       searchBox.on('input', function() {
         logContent.empty();
-        esClient.filterMessage(this.value, rtLog.renderLog)
+        es.filterAll(this.value, rtLog.renderLog)
       });
 
       rtLog.initTagFilter();
@@ -86,7 +86,6 @@ define(function(require) {
       loadingIcon.hide();
       logStatus.empty()
       logStatus.append('<div><span>Total hits: </span>' + resp.hits.total + '</div>')
-        //logStatus.append('<div><span>Showed lines from </span>0<span> to </span>' + ((pageNum - 1) * perPage + perPage) + '</div>')
 
       var fields = resp.hits.hits.map(function(item) {
         return item.fields || item['_source'];
@@ -118,24 +117,8 @@ define(function(require) {
         lineText + '</span></td></tr>'
     },
 
-    renderMessage: function(message) {
-      return '<span class="log-message">' + message + '</span>'
-    },
-
-    renderJson: function(json) {
-      return '<span class="log-message ' + rtLog.getStateColor(json.state) + '">' + json.name + '</span>'
-    },
-
-    getValueColor: function(value) {
-      if (value.json) {
-        return rtLog.getTestColor(value.json.state)
-      }
-      if (value.error_type) {
-
-      }
-    },
     getLineColor: function(error) {
-      switch (state) {
+      switch (error) {
         case 'warning':
           return 'log-line-warning';
         case 'failed':
