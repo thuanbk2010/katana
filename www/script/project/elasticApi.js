@@ -148,9 +148,13 @@ define(['elasticsearch'], function(require) {
       if (error) {
         console.log(error);
       } else {
-        var properties = resp[defaultSearchQuery.index].mappings.logs.properties ||
-          resp[defaultSearchQuery.index].mappings.properties
-        callback(properties)
+        var keys = Object.keys(resp)
+        if (keys && keys.length) {
+          var index = keys[0]
+          var properties = resp[index].mappings.logs.properties ||
+            resp[defaultSearchQuery.index].mappings.properties
+          callback(properties)
+        }
       }
     })
   }
