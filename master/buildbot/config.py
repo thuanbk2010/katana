@@ -66,6 +66,7 @@ class MasterConfig(object):
         self.title = 'Buildbot'
         self.titleURL = 'http://buildbot.net'
         self.buildbotURL = 'http://localhost:8080/'
+        self.elasticUrl = 'http://localhost:8080/'
         self.changeHorizon = None
         self.cleanUpPeriod = None
         self.buildRequestsDays = None
@@ -131,7 +132,7 @@ class MasterConfig(object):
         "status", "title", "titleURL", "user_managers", "validation", "realTimeServer",
         "analytics_code", "gzip", "autobahn_push", "lastBuildCacheDays",
         "requireLogin", "globalFactory", "slave_debug_url", "slaveManagerUrl",
-        "cleanUpPeriod", "buildRequestsDays", "logstashConfDir",
+        "cleanUpPeriod", "buildRequestsDays", "logstashConfDir", "elasticUrl"
     ])
 
     @classmethod
@@ -266,6 +267,7 @@ class MasterConfig(object):
         copy_str_param('title', alt_key='projectName')
         copy_str_param('titleURL', alt_key='projectURL')
 
+        copy_str_param('elasticUrl')
         copy_str_param('buildbotURL')
         # Make sure that buildbotURL ends with a forward slash
         if not self.buildbotURL.endswith('/'):
