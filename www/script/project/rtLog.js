@@ -18,7 +18,7 @@ define(function(require) {
   var loadingIcon = $('.log-loading-icon');
 
   var settings = {
-    index: instantJSON.global.elasticIndex || "buildlog",
+    index: instantJSON.global.elasticIndex || "kevent-buildlogs-*",
     build: instantJSON.build.number,
     builder: instantJSON.build.builder_name,
     steps: null,

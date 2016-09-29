@@ -16,11 +16,11 @@ define(['elasticsearch', 'immutable'], function(require) {
 
     var must = []
     if (settings.build) {
-      must.push({ "match": { "build": settings.build } })
+      must.push({ "match": { "buildNumber": settings.build } })
     }
 
     if (settings.builder) {
-      must.push({ "match": { "build": settings.builder } })
+      must.push({ "match": { "builderName": settings.builder } })
     }
 
     return {
@@ -32,7 +32,7 @@ define(['elasticsearch', 'immutable'], function(require) {
           "constant_score": {
             "query": {
               "bool": {
-                "must": must,
+                "must": { "match": { "path": "/Users/kateryna/pr/hackweeek/tests/logs/utr_out.txt" } },
                 "should": []
               }
             }
