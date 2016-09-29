@@ -1,0 +1,35 @@
+{% extends "layout.html" %} {% import 'submenu.html' as submenu %} {% set bodyId = 'id="build_log_page"' %} {% block extra_script %}
+<script type="text/javascript">
+require.deps.push('buildLog');
+</script>
+{% endblock %} {% block submenu %} {{submenu.buildsubmenu(active_page=build_number, pathNum=5, buildersPath=path_to_builders, codebasesPath=path_to_codebases, builderName=builder_name, builderPath=path_to_builder, buildNumber=build_number, stepName='', selectedProject=selectedproject)}} {% endblock %} {% block content %}
+<div class="log-status"></div>
+<div class="row">
+    <div class="col-md-3">
+        <input id="elastic-search" type="search" class="form-control" placeholder="Search" aria-describedby="basic-addon2">
+    </div>
+    <div class="col-md-6">
+        <input type="text" class="select2" id="field-filter" style="width:300px">
+        <!--<select class="select2" multiple="multiple" id="line-filter" style="width:300px">
+            <option value="AL">All</option>
+            <option value="Am">Error</option>
+            <option value="An">Warning</option>
+        </select>-->
+        <!--<select class="select2" multiple="multiple" id="type-filter" style="width:300px">
+        </select>
+        <select class="select2" multiple="multiple" id="tag-filter" style="width:300px">
+        </select>-->
+    </div>
+</div>
+<div class="row">
+    <div class="log-container">
+        <table>
+            <tbody id="log-content">
+            </tbody>
+        </table>
+        <div class="log-loading-icon">
+            <span class="spin-icon animate-spin pull-bottom"></span>
+        </div>
+    </div>
+</div>
+{% endblock content %}

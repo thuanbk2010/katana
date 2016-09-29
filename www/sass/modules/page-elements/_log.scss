@@ -1,0 +1,61 @@
+@charset "UTF-8";
+.log-container {
+    margin: 11px;
+    padding: 10px;
+    border: 1px solid lightgrey;
+    border-radius: 4px;
+    font-size: 14px;
+    overflow: auto;
+    font-family: monospace;
+    height: 600px;
+    background-color: white;
+    overflow: auto;
+}
+
+.log-status {
+    font-weight: bold;
+    margin: 11px;
+}
+
+.log-status span {
+    font-weight: 300;
+}
+
+.log-line {
+    padding: 2px 0;
+    vertical-align: top;
+}
+
+.log-time {
+    color: #6a86f8;
+    margin: 0 10px;
+}
+
+.log-line::before {
+    color: lightgrey;
+}
+
+.log-line-passed {
+    background-color: rgba(144, 238, 144, 0.29);
+}
+
+.log-line-failure {
+    background-color: rgba(240, 128, 128, 0.34);
+}
+
+.log-line-error {
+    background-color: rgba(240, 128, 128, 0.34);
+}
+
+.log-line-working {
+    background-color: lightyellow;
+}
+
+// 0: 'Inconclusive',
+// 1: 'NotRunnable',
+// 2: 'Skipped',
+// 3: 'Ignored',
+// 4: 'Success',
+// 5: 'Failed',
+// 6: 'Error',
+// 7: 'Cancelled'

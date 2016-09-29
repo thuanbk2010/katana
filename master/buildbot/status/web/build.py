@@ -29,6 +29,7 @@ from buildbot.schedulers.forcesched import ForceScheduler, TextParameter
 from buildbot.status.web.status_json import BuildJsonResource
 from buildbot.status.web.step import StepsResource
 from buildbot.status.web.tests import TestsResource
+from buildbot.status.web.build_log import BuildLogResource
 from buildbot import util, interfaces
 from buildbot.status.results import RESUME, EXCEPTION
 
@@ -501,6 +502,8 @@ class StatusResourceBuild(HtmlResource):
             return StepsResource(self.build_status)
         if path == "tests":
             return TestsResource(self.build_status)
+        if path == "log":
+            return BuildLogResource(self.build_status)
 
         return HtmlResource.getChild(self, path, req)
 

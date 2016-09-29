@@ -1,31 +1,26 @@
 @charset "UTF-8";
+
 /**
 * Main project stylesheet combiner
-* 
+*
 * @section Setup
 * @author sholm
 */
 
 // ---------------------------------------------------------------------------
 // Imports
-
 @import "compass";
 @import "bootstrap/variables";
 @import "bootstrap/bootstrap";
 @import "bootstrap-theme";
 @import "modules/base";
-
 // ---------------------------------------------------------------------------
 // Framework
-
 @import "modules/framework/framework";
-@import "modules/framework/animate"; 
-
+@import "modules/framework/animate";
 // ---------------------------------------------------------------------------
 // Default typography
-
 @import "modules/framework/typography"; // Must be imported after base
-
 // ---------------------------------------------------------------------------
 // Modules
 @import "modules/page-elements/navigation";
@@ -38,5 +33,5 @@
 @import "modules/page-elements/main";
 @import "modules/page-elements/toastr";
 @import "modules/page-elements/icons";
+@import "modules/page-elements/log";
 @import "testreport";
-

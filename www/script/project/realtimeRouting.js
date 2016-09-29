@@ -23,6 +23,13 @@ define(function (require) {
                             rtBuildDetail.init();
                         });
                     break;
+                case 'build_log_page':
+                    // For the build log page
+                    require(['rtLog'],
+                        function (rtLog) {
+                            rtLog.init();
+                        });
+                    break;
 
                 case 'builders_page':
                     // For the builderspage
