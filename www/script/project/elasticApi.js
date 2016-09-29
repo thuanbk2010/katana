@@ -1,41 +1,8 @@
 /*global define, Handlebars */
 define(['elasticsearch', 'immutable'], function(require) {
-  //"use strict";
+  "use strict";
 
   var client, defaultSearchQuery;
-  //var must = [{ "match": { "path": settings.path } }]
-  //var should = [{ "wildcard": { "message": "*" } }]
-
-  var queries = {
-    match_fields: function(must, should) {
-      return {
-        "query": {
-          "constant_score": {
-            "query": {
-              "bool": {
-                "must": must || [],
-                "should": should || []
-              }
-            }
-          }
-        }
-      }
-    },
-    get_all: {
-      "query": {
-        "match_all": {}
-      }
-    },
-    match_all: function(value) {
-      return {
-        "query": {
-          "match": {
-            "_all": value
-          }
-        }
-      }
-    },
-  }
 
   function connect(connection, settings) {
     client = prepareElasticSearch(connection)
@@ -47,11 +14,31 @@ define(['elasticsearch', 'immutable'], function(require) {
       console.error('Invalid query settings.');
     }
 
+    var must = []
+    if (settings.build) {
+      must.push({ "match": { "build": settings.build } })
+    }
+
+    if (settings.builder) {
+      must.push({ "match": { "build": settings.builder } })
+    }
+
     return {
       index: settings.index,
       from: (settings.pageNum - 1) * settings.perPage,
       size: settings.perPage,
-      body: queries.match_all
+      body: {
+        "query": {
+          "constant_score": {
+            "query": {
+              "bool": {
+                "must": must,
+                "should": []
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -116,12 +103,13 @@ define(['elasticsearch', 'immutable'], function(require) {
       });
   }
 
-  function getSearchQuery(value) {
+  function getShouldQuery(value) {
     if (!value) {
-      return queries.get_all
+      return []
     }
     if (value.indexOf(':') === -1) {
-      return queries.match_all(value)
+      return [{ "match": { "_all": value } }]
+
     }
     var terms = value.split('|');
     var should = [];
@@ -131,17 +119,20 @@ define(['elasticsearch', 'immutable'], function(require) {
 
         var jsonVariable = {};
         jsonVariable[field[0]] = field[1]
-        should.push({ "wildcard": jsonVariable });
+        should.push({ "match": jsonVariable });
       }
     })
 
-    return queries.match_fields([], should)
+    return should
   }
 
   function filterAll(value, renderCallback) {
     var searchQuery = defaultSearchQuery
 
-    searchQuery.body = getSearchQuery(value)
+    var should = getShouldQuery(value)
+    if (should) {
+      searchQuery.body['query']['constant_score']['query']['bool']['should'] = should
+    }
     searchQuery.from = 0;
 
     client.search(searchQuery)

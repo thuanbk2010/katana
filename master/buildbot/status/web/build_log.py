@@ -30,6 +30,7 @@ class BuildLogResource(HtmlResource):
         cxt['path_to_builder'] = path_to_builder(req, b.getBuilder())
         cxt['path_to_builders'] = path_to_builders(req, project)
         cxt['path_to_codebases'] = path_to_codebases(req, project)
+        cxt['instant_json']['build'] = { "number": b.getNumber(), "builder_name": builder.name }
 
         template = req.site.buildbot_service.templates.get_template("build_log.html")
         return template.render(**cxt)

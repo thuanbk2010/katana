@@ -19,8 +19,8 @@ define(function(require) {
 
   var settings = {
     index: instantJSON.global.elasticIndex || "buildlog",
-    build: null,
-    bilder: null,
+    build: instantJSON.build.number,
+    builder: instantJSON.build.builder_name,
     steps: null,
     codebase: null,
     branch: null,
