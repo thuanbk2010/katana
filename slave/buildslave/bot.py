@@ -192,7 +192,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
         if manifest:
             manifest['logFilePath'] = self._createCommandLogFile(manifest)
-            logstashgen.generate_logstash_config(manifest, self.logsdir, command)
+            self.bot.logstashgen.generate_logstash_config(manifest, self.logsdir)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
 
@@ -308,6 +308,7 @@ class Bot(pb.Referenceable, service.MultiService):
         self.usePTY = usePTY
         self.unicode_encoding = unicode_encoding or sys.getfilesystemencoding() or 'ascii'
         self.builders = {}
+        self.logstashgen = logstashgen.logstashgen()
 
     def startService(self):
         assert os.path.isdir(self.basedir)
