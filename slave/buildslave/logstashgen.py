@@ -70,7 +70,7 @@ filter {
 %s
       "owners" => "%s"
       "reason" => "%s"
-      "logfilePath" => %s
+      "logfilePath" => "%s"
     }
   }
 }
