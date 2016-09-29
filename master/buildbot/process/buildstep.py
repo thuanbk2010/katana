@@ -546,12 +546,16 @@ class BuildStep(object, properties.PropertiesMixin):
         # run on
         return [(l.getLock(self.build.slavebuilder.slave), la) for l, la in initialLocks]
 
+    def getLogstashConfigDir(self):
+        return self.build.builder.master.config.logstashConfDir[self.buildslave.os] \
+            if self.buildslave.os and self.buildslave.os in self.build.builder.master.config.logstashConfDir else None
+
     def getManifest(self):
         return {
             'buildbotURL': self.build.builder.master.config.buildbotURL,
             'buildNumber': self.build.build_status.number,
             'builderName': self.build.builder.name,
-            'logstashConfDir': self.build.builder.master.config.logstashConfDir[self.buildslave.os],
+            'logstashConfDir': self.getLogstashConfigDir(),
             'slaveName': self.build.slavename,
             'stepName': self.name,
             'stepNumber': self.step_status.step_number,
