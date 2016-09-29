@@ -9,16 +9,16 @@ define(function(require) {
   var logContainer = $('.log-container')
   var logContent = $('#log-content');
   var logStatus = $('.log-status');
-
+  var instantData = JSON.parse(instantJSON.global.data);
   var connection = {
-    host: instantJSON.global.elasticUrl || '0.0.0.0:9200',
+    host: instantData.elasticUrl || '0.0.0.0:9200',
     log: 'trace'
   };
 
   var loadingIcon = $('.log-loading-icon');
 
   var settings = {
-    index: instantJSON.global.elasticIndex || "kevent-buildlogs-*",
+    index: instantData.elasticIndex || "",
     build: instantJSON.build.number,
     builder: instantJSON.build.builder_name,
     steps: null,
