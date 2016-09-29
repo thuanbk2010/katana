@@ -67,6 +67,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         #service.Service.__init__(self) # Service has no __init__ method
         self.commandLogFile = None
         self.setName(name)
+        self.logsdir = None
 
     def __repr__(self):
         return "<SlaveBuilder '%s' at %d>" % (self.name, id(self))
@@ -85,6 +86,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         self.basedir = os.path.join(self.bot.basedir, self.builddir)
         if not os.path.isdir(self.basedir):
             os.makedirs(self.basedir)
+        self.logsdir = os.path.join(self.basedir, 'builds', 'logs')
 
     def stopService(self):
         service.Service.stopService(self)
@@ -120,10 +122,10 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if commandArg:
             commandLogFileName = commandLogFileName + "_" + commandArg
 
-        if not os.path.isdir(self.bot.logsdir):
-            os.makedirs(self.bot.logsdir)
+        if not os.path.isdir(self.logsdir):
+            os.makedirs(self.logsdir)
 
-        commandLogFilePath = os.path.join(self.bot.logsdir, commandLogFileName+".log")
+        commandLogFilePath = os.path.join(self.logsdir, commandLogFileName + ".log")
         self.commandLogFile = open(commandLogFilePath, 'w')
         log.msg("Created logfile %s" % commandLogFilePath)
         return commandLogFilePath
@@ -185,7 +187,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
         if manifest:
             manifest['logFilePath'] = self._createCommandLogFile(manifest)
-            logstashgen.generate_logstash_config(manifest, self.bot.logsdir, command)
+            logstashgen.generate_logstash_config(manifest, self.logsdir, command)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
 
@@ -301,7 +303,6 @@ class Bot(pb.Referenceable, service.MultiService):
         self.usePTY = usePTY
         self.unicode_encoding = unicode_encoding or sys.getfilesystemencoding() or 'ascii'
         self.builders = {}
-        self.logsdir = os.path.join(self.basedir, 'logs')
 
     def startService(self):
         assert os.path.isdir(self.basedir)
