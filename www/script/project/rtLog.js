@@ -1,72 +1,60 @@
 /*global define, Handlebars */
-define(['elasticsearch', 'trunk8'], function(require) {
+define(function(require) {
   "use strict";
-  var searchBox = $('#elastic-search');
 
+  var es = require('elasticApi')
+  var trunk8 = require('trunk8')
+
+  var searchBox = $('#elastic-search');
   var logContainer = $('.log-container')
   var logContent = $('#log-content');
   var logStatus = $('.log-status');
 
-  var pageNum = 1;
-  var perPage = 150;
-  var continueHit = false;
-
-  var logPath = "/Users/kateryna/pr/hackweeek/tests/logs/utr_out.txt";
-
-  var esConnection = {
-    host: 'localhost:9200',
+  var connection = {
+    host: instantJSON.global.elasticUrl || '0.0.0.0:9200',
     log: 'trace'
   };
 
-  var index = 'buildlog'
-
   var loadingIcon = $('.log-loading-icon');
 
-  var searchQuery2 = {
-    index: index,
-
-    from: (pageNum - 1) * perPage,
-    size: perPage,
-    body: {
-      "query": {
-        "constant_score": {
-          "query": {
-            "bool": {
-              "must": [
-                { "match": { "path": "/Users/kateryna/pr/hackweeek/tests/logs/utr_out.txt" } },
-              ],
-              "should": [
-                { "wildcard": { "message": "*" } }
-              ]
-            }
-          }
-        }
-      }
-    }
+  var settings = {
+    index: "event_buildlogs",
+    build: null,
+    bilder: null,
+    steps: null,
+    codebase: null,
+    branch: null,
+    pageNum: 1,
+    perPage: 100,
+    showLastPage: true,
+    showErrorsOnly: true
   }
-
-
-  var client;
 
   var rtLog = {
     init: function() {
-      console.log('rtLog init')
-
+      es.connect(connection, settings);
       searchBox.on('input', function() {
-        var value = this.value.toLowerCase() || "*";
-        searchQuery2.body.query.constant_score.query.bool.should[0].wildcard.message = value;
-        pageNum = 1;
-        searchQuery2.from = (pageNum - 1) * perPage;
-        rtLog.getLogPage(pageNum, perPage, searchQuery2, rtLog.renderLog)
+        logContent.empty();
+        esClient.filterMessage(this.value, rtLog.renderLog)
       });
 
-      rtLog.connectElasticsearch();
-
       rtLog.initTagFilter();
-
-      rtLog.getLogPage(pageNum, perPage, searchQuery2, rtLog.renderLog);
-      //rtLog.initPagination(pageNum, perPage, searchQuery, rtLog.renderLog)
+      loadingIcon.show();
+      rtLog.initPaging();
     },
+
+    initPaging: function() {
+      logContent.empty();
+      es.getPage(rtLog.renderLog);
+
+      logContainer.scroll(function() {
+        if (logContainer.scrollTop() >= $(document).height()) {
+          loadingIcon.show();
+          es.nextPage(rtLog.renderLog);
+        }
+      });
+    },
+
 
     initFilters: function() {
       var typeFilter = $('#type-filter');
@@ -78,78 +66,27 @@ define(['elasticsearch', 'trunk8'], function(require) {
     },
 
     initTagFilter: function() {
-      client.indices.getMapping({ index: index }, function(error, response) {
-        if (error) {
-          console.log(error);
-        } else {
-          console.log(response);
-          var fieldFilter = $('#field-filter');
-
-          var properties = Object.keys(response.buildlog.mappings.logs.properties)
-          var items = properties.map(function(value, i) { return { id: i, text: value } })
-          fieldFilter.select2({
-            data: items,
-            placeholder: "Fields",
-            allowClear: true,
-            multiple: true,
-          });
-        }
-      });
-    },
-
-    connectElasticsearch: function() {
-      client = new elasticsearch.Client(esConnection);
-
-      if (!client) {
-        console.error('Elasticsearch client is undefined.');
-        return
-      }
-
-      client.ping({
-        hello: "elasticsearch"
-      }, function(error) {
-        if (error) {
-          console.error('Elasticsearch cluster is down!');
-        } else {
-          console.log('Elasticsearch connection successfully.');
-        }
-      });
-    },
-
-    initPagination: function(pageNum, perPage, searchQuery, renderCallback) {
-      rtLog.getLogPage(pageNum, perPage, searchQuery, rtLog.renderLog);
-
-      logContainer.scroll(function() {
-        if (logContainer.scrollTop() >= $(document).height()) {
-          pageNum++;
-          rtLog.getLogPage(pageNum, perPage, searchQuery, renderCallback)
-        }
-      });
-    },
-
-    getLogPage: function(pageNum, perPage, searchQuery, renderCallback) {
-      loadingIcon.show();
-      client.search(searchQuery)
-        .then(function(resp) {
-          if (pageNum === 1) {
-            logContent.empty()
-          }
-          loadingIcon.hide();
-
-          renderCallback(resp);
-        }, function(err) {
-          console.trace(err.message);
+      es.getMapping(function(properties) {
+        var properties = Object.keys(properties)
+        var items = properties.map(function(value, i) { return { id: i, text: value } })
+        $('#field-filter').select2({
+          data: items,
+          placeholder: "Fields",
+          allowClear: true,
+          multiple: true,
         });
-
+      })
     },
 
     renderLog: function(resp) {
       if (!resp) {
         return;
       }
+
+      loadingIcon.hide();
       logStatus.empty()
       logStatus.append('<div><span>Total hits: </span>' + resp.hits.total + '</div>')
-      logStatus.append('<div><span>Showed lines from </span>0<span> to </span>' + ((pageNum - 1) * perPage + perPage) + '</div>')
+        //logStatus.append('<div><span>Showed lines from </span>0<span> to </span>' + ((pageNum - 1) * perPage + perPage) + '</div>')
 
       var fields = resp.hits.hits.map(function(item) {
         return item.fields || item['_source'];

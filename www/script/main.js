@@ -40,7 +40,8 @@ require.config({
     "login": "project/login",
     "precompiled.handlebars": "../generated/precompiled.handlebars",
     "elasticsearch": "libs/elasticsearch",
-    "trunk8": "libs/trunk8"
+    "trunk8": "libs/trunk8",
+    "elasticApi": "project/elasticApi"
   },
   shim: {
     "overscroll": {
