@@ -120,6 +120,9 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if commandArg:
             commandLogFileName = commandLogFileName + "_" + commandArg
 
+        if not os.path.isdir(self.bot.logsdir):
+            os.makedirs(self.bot.logsdir)
+
         commandLogFilePath = os.path.join(self.bot.logsdir, commandLogFileName+".log")
         self.commandLogFile = open(commandLogFilePath, 'w')
         log.msg("Created logfile %s" % commandLogFilePath)
@@ -302,10 +305,6 @@ class Bot(pb.Referenceable, service.MultiService):
 
     def startService(self):
         assert os.path.isdir(self.basedir)
-
-        if not os.path.isdir(self.logsdir):
-            os.makedirs(self.logsdir)
-
         service.MultiService.startService(self)
 
     def remote_getCommands(self):
