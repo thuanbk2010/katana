@@ -629,6 +629,7 @@ class TestTrigger(steps.BuildStepMixin, unittest.TestCase):
 
         scheduler_a.trigger = trigger_sch
         self.step = trigger.Trigger(schedulerNames=['a'], waitForFinish=True)
+        self.step.buildslave = Mock()
         self.step.addCompleteLog = lambda x,y: True
         self.step.step_status = Mock()
         self.step.step_status.getLogs = lambda: []
@@ -637,6 +638,7 @@ class TestTrigger(steps.BuildStepMixin, unittest.TestCase):
             self.expected_urls.append({'text': text, 'path': path})
         self.step.build = fakebuild.FakeBuild()
         self.step.build.builder.botmaster = m.botmaster
+        self.step.build.builder.master = m
 
         self.step.build.getAllSourceStamps = lambda: []
         self.step.build.build_status.getAllGotRevisions = lambda: {}

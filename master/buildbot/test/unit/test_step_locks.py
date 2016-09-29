@@ -38,6 +38,7 @@ class TestStepLocks(unittest.TestCase):
         self.builder = Mock()
         self.builder.botmaster = self.master.botmaster
         self.build.setBuilder(self.builder)
+        self.build.builder.master.config.logstashConfDir = {}
 
         self.build_status = FakeBuildStatus()
         self.step_status = Mock()

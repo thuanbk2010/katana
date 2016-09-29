@@ -95,7 +95,7 @@ class MasterConfig(object):
         self.slave_debug_url = None
         # This URL will only be used if no slaveManagerUrl is present in master.cfg
         self.slaveManagerUrl = None
-        self.logstashConfDir = None
+        self.logstashConfDir = {}
 
         self.validation = dict(
             branch=re.compile(r'^[\w.+/~-]*$'),

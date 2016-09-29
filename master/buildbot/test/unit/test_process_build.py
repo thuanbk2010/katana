@@ -114,6 +114,7 @@ class TestBuild(unittest.TestCase):
         self.builder = self.createBuilder()
         self.build = Build([r])
         self.build.setBuilder(self.builder)
+        self.build.builder.master.config.logstashConfDir = {}
 
     def createBuilder(self):
         bldr = Mock()
