@@ -61,7 +61,6 @@ class logstashgen():
     %s
           "owners" => "%s"
           "reason" => "%s"
-          "logfilePath" => "%s"
         }
       }
     }
@@ -77,7 +76,6 @@ class logstashgen():
             sourcestamps_text.rstrip("\n"),
             manifest["owners"],
             manifest["reason"],
-            manifest['logFilePath'],
         )
 
         try:
