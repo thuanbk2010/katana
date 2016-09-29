@@ -551,12 +551,13 @@ class BuildStep(object, properties.PropertiesMixin):
             'buildbotURL': self.build.builder.master.config.buildbotURL,
             'buildNumber': self.build.build_status.number,
             'builderName': self.build.builder.name,
+            'logstashConfDir': self.build.builder.master.config.logstashConfDir[self.buildslave.os],
             'slaveName': self.build.slavename,
             'stepName': self.name,
             'stepNumber': self.step_status.step_number,
             'sourcestamps': [ss.asDict() for ss in self.build.build_status.getSourceStamps()],
             'reason': self.build.build_status.reason,
-            'owners': self.build.build_status.owners
+            'owners': self.build.build_status.owners,
         }
 
     def startStep(self, remote):

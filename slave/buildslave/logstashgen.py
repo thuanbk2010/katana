@@ -1,4 +1,6 @@
-def generate_logstash_config(manifest, command=None):
+import os
+
+def generate_logstash_config(manifest, logsdir, command=None):
     """
     Given a manifest dictionary, generates a logstash configuration file that includes the manifest data as log fields
     @param manifest: A dictionary of the details of the build
@@ -49,8 +51,8 @@ def generate_logstash_config(manifest, command=None):
 input {
     file {
         path =>  [
-        "/srv/logs/**/*.log",
-        "/srv/logs/**/*.txt"
+        "%s/**/*.log",
+        "%s/**/*.txt"
         ]
     }
 }
@@ -68,10 +70,15 @@ filter {
 %s
       "owners" => "%s"
       "reason" => "%s"
+      "logfilePath" => %s
     }
   }
 }
 """ % (
+        #inputs
+        logsdir,
+        logsdir,
+        #filters
         manifest["buildbotURL"],
         manifest["builderName"],
         manifest["buildNumber"],
@@ -81,10 +88,14 @@ filter {
         sourcestamps_text.rstrip("\n"),
         manifest["owners"],
         manifest["reason"],
+        manifest['logFilePath'],
     )
 
-    # TODO: cfg location/name is temporary
-    with open("logstash-filter.cfg", 'w') as cfg:
+    try:
+        os.stat(manifest["logstashConfDir"])
+    except:
+        os.makedirs(manifest["logstashConfDir"])
+    with open("%s/logstash-katana.conf" % manifest["logstashConfDir"], 'w') as cfg:
         cfg.write(config_text)
 
     return

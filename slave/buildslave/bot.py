@@ -185,7 +185,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
 
         if manifest:
             manifest['logFilePath'] = self._createCommandLogFile(manifest)
-            logstashgen.generate_logstash_config(manifest, command)
+            logstashgen.generate_logstash_config(manifest, self.bot.logsdir, command)
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
 
