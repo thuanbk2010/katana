@@ -30,6 +30,7 @@ from buildslave.commands import registry, base
 from buildslave import monkeypatches
 from datetime import datetime
 import logstashgen
+import re
 
 class UnknownCommand(pb.Error):
     pass
@@ -125,10 +126,14 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if not os.path.isdir(self.logsdir):
             os.makedirs(self.logsdir)
 
-        commandLogFilePath = os.path.join(self.logsdir, commandLogFileName + ".log")
+        commandLogFilePath = os.path.join(self.logsdir, self.escapeLogFileName(commandLogFileName + ".log"))
         self.commandLogFile = open(commandLogFilePath, 'w')
         log.msg("Created logfile %s" % commandLogFilePath)
         return commandLogFilePath
+
+    def escapeLogFileName(self, commandLogFileName):
+        commandLogFileName = re.sub(r'[^\w\.\-]', '_', commandLogFileName)
+        return commandLogFileName
 
     def saveCommandOutputToLog(self, data):
         if self.commandLogFile:
