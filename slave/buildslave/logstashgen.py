@@ -1,4 +1,5 @@
 import os
+from twisted.python import log
 
 def generate_logstash_config(manifest, logsdir, command=None):
     """
@@ -97,5 +98,7 @@ filter {
         os.makedirs(manifest["logstashConfDir"])
     with open("%s/logstash-katana.conf" % manifest["logstashConfDir"], 'w') as cfg:
         cfg.write(config_text)
+    log.msg("Created Logstash configuration file %s." %
+            "%s/logstash-katana.conf" % manifest["logstashConfDir"])
 
     return
