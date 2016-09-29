@@ -1,5 +1,5 @@
 /*global define, Handlebars */
-define(['elasticsearch', 'immutable'], function(require) {
+define(['elasticsearch'], function(require) {
   "use strict";
 
   var client, defaultSearchQuery;
@@ -32,7 +32,7 @@ define(['elasticsearch', 'immutable'], function(require) {
           "constant_score": {
             "query": {
               "bool": {
-                "must": { "match": { "path": "/Users/kateryna/pr/hackweeek/tests/logs/utr_out.txt" } },
+                "must": must,
                 "should": []
               }
             }
