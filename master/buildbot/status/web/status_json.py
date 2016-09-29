@@ -1176,7 +1176,9 @@ class GlobalJsonResource(JsonResource):
                   "build_load": len(queue) + current_builds,
                   "utc": time.time() * 1000,
                   "total_builds_lastday": total_builds_lastday,
-                  "elasticUrl": self.status.master.config.elasticUrl}
+                  "elasticUrl": self.status.master.config.elasticUrl,
+                  "elasticIndex": self.status.master.config.elasticIndex,
+                  }
 
         defer.returnValue(result)
 
