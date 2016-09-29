@@ -9,11 +9,17 @@ define(function(require) {
   var logContainer = $('.log-container')
   var logContent = $('#log-content');
   var logStatus = $('.log-status');
+  var warningsFilter = { "match": { "error_type": "warning" } };
+  var errorFilter = { "match": { "error_type": "error" } };
+  var filters = []
+
   var instantData = JSON.parse(instantJSON.global.data);
   var connection = {
     host: instantData.elasticUrl || '0.0.0.0:9200',
     log: 'trace'
   };
+
+  var lastHitsCount = 0;
 
   var loadingIcon = $('.log-loading-icon');
 
@@ -25,9 +31,7 @@ define(function(require) {
     codebase: null,
     branch: null,
     pageNum: 1,
-    perPage: 100,
-    showLastPage: true,
-    showErrorsOnly: true
+    perPage: 100
   }
 
   var rtLog = {
@@ -36,6 +40,31 @@ define(function(require) {
       searchBox.on('input', function() {
         logContent.empty();
         es.filterAll(this.value, rtLog.renderLog)
+      });
+
+      $("#log-cb-errors").click(function() {
+        logContent.empty();
+        if ($(this).is(':checked')) {
+          filters.push(errorFilter)
+          es.filter(filters, rtLog.renderLog)
+        } else {
+          filters.pop(errorFilter)
+          es.clearFilter(errorFilter, rtLog.renderLog)
+        }
+      });
+
+      $("#log-cb-warnings").click(function() {
+        logContent.empty();
+        if ($(this).is(':checked')) {
+          filters.push(warningsFilter)
+          es.filter(filters, rtLog.renderLog)
+
+        } else {
+          filters.pop(warningsFilter)
+          es.clearFilter(warningsFilter, rtLog.renderLog)
+        }
+
+
       });
 
       rtLog.initTagFilter();
@@ -49,6 +78,9 @@ define(function(require) {
 
       logContainer.scroll(function() {
         if (logContainer.scrollTop() >= $(document).height()) {
+          if (settings.sort === "desc") {
+            return
+          }
           loadingIcon.show();
           es.nextPage(rtLog.renderLog);
         }
@@ -86,7 +118,7 @@ define(function(require) {
       loadingIcon.hide();
       logStatus.empty()
       logStatus.append('<div><span>Total hits: </span>' + resp.hits.total + '</div>')
-
+      logStatus.append('<div><span>Page size: </span>' + settings.perPage + '</div>')
       var fields = resp.hits.hits.map(function(item) {
         return item.fields || item['_source'];
       })

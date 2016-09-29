@@ -68,12 +68,7 @@ define(['elasticsearch'], function(require) {
     return client;
   }
 
-  function search(query, renderCallback) {
-    var searchQuery = defaultSearchQuery
-    if (query) {
-      searchQuery.query = query
-    }
-
+  function search(searchQuery, renderCallback) {
     client.search(searchQuery)
       .then(function(resp) {
         renderCallback(resp);
@@ -143,6 +138,38 @@ define(['elasticsearch'], function(require) {
       });
   }
 
+  function filter(shoulds, renderCallback) {
+    var searchQuery = defaultSearchQuery
+    var must = searchQuery.body['query']['constant_score']['query']['bool']['must'];
+    if (shoulds) {
+      searchQuery.body['query']['constant_score']['query']['bool']['must'] = must.concat(shoulds)
+    }
+    searchQuery.from = 0;
+
+    client.search(searchQuery)
+      .then(function(resp) {
+        renderCallback(resp);
+      }, function(err) {
+        console.trace(err.message);
+      });
+  }
+
+  function clearFilter(should, renderCallback) {
+    var searchQuery = defaultSearchQuery
+
+    if (should) {
+      searchQuery.body['query']['constant_score']['query']['bool']['must'].pop(should)
+    }
+    searchQuery.from = 0;
+
+    client.search(searchQuery)
+      .then(function(resp) {
+        renderCallback(resp);
+      }, function(err) {
+        console.trace(err.message);
+      });
+  }
+
   function getMapping(callback) {
     client.indices.getMapping({ index: defaultSearchQuery.index }, function(error, resp) {
       if (error) {
@@ -167,7 +194,8 @@ define(['elasticsearch'], function(require) {
     getMapping: getMapping,
     getPage: getPage,
     nextPage: nextPage,
-    filter: function(filters) {}
+    filter: filter,
+    clearFilter: clearFilter
   }
 
   return methods

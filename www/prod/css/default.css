@@ -1398,6 +1398,7 @@ button.toast-close-button{padding:0;cursor:pointer;background:0 0;border:0;-webk
 .log-line-passed{background-color:rgba(144,238,144,.29)}
 .log-line-error,.log-line-failure{background-color:rgba(240,128,128,.34)}
 .log-line-warning{background-color:#ffffe0}
+.log-cb-filters{margin-top:10px}
 .table-holder{display:none}
 .log-main .main-head{font-size:17px;margin:0 0 11px}
 .log-main .main-head.big{color:#FFF;float:left;font-size:18px;margin:3px 0 0 25px;padding:0;text-shadow:none}
