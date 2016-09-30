@@ -27,7 +27,7 @@ define(function(require) {
     index: instantData.elasticIndex || "",
     build: instantJSON.build.number,
     builder: instantJSON.build.builder_name,
-    steps: null,
+    step: null,
     codebase: null,
     branch: null,
     pageNum: 1,
@@ -36,6 +36,7 @@ define(function(require) {
 
   var rtLog = {
     init: function() {
+      settings.step = rtLog.getParameterByName('step');
       es.connect(connection, settings);
       searchBox.on('input', function() {
         logContent.empty();
@@ -87,6 +88,15 @@ define(function(require) {
       });
     },
 
+    getParameterByName: function(name, url) {
+      if (!url) url = window.location.href;
+      name = name.replace(/[\[\]]/g, "\\$&");
+      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
+    },
 
     initFilters: function() {
       var typeFilter = $('#type-filter');

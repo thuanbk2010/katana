@@ -23,6 +23,10 @@ define(['elasticsearch'], function(require) {
       must.push({ "match": { "builderName": settings.builder } })
     }
 
+    if (settings.step) {
+      must.push({ "match": { "step": settings.step } })
+    }
+
     return {
       index: settings.index,
       from: (settings.pageNum - 1) * settings.perPage,
