@@ -13,8 +13,8 @@ define(function(require) {
 
   var instantData = JSON.parse(instantJSON.global.data);
   var connection = {
-    host: instantData.elasticUrl || '0.0.0.0:9200',
-    log: 'trace'
+    host: instantData.elasticUrl || '0.0.0.0:9200'
+      //log: 'trace'
   };
 
   var lastHitsCount = 0;
