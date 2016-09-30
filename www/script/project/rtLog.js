@@ -143,7 +143,8 @@ define(function(require) {
       if (!value.hasOwnProperty('@timestamp')) {
         return
       }
-      var timestamp = moment(value['@timestamp'][0]).format('HH:MM:SS')
+
+      var timestamp = moment(value['@timestamp']).format('HH:MM:SS')
       var lineText = value.message
       var lineColor = ""
 
