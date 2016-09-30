@@ -97,7 +97,7 @@ define(['elasticsearch', 'lodash'], function(require) {
     return {
       index: settings.index,
       from: (settings.pageNum - 1) * settings.perPage,
-      //size: settings.perPage,
+      size: settings.perPage,
       body: {
         "query": {
           "constant_score": {
