@@ -14,7 +14,6 @@ define(function(require) {
   var instantData = JSON.parse(instantJSON.global.data);
   var connection = {
     host: instantData.elasticUrl || '0.0.0.0:9200'
-      //log: 'trace'
   };
 
   var lastHitsCount = 0;
@@ -29,7 +28,7 @@ define(function(require) {
     codebase: null,
     branch: null,
     pageNum: 1,
-    perPage: 100
+    perPage: 1000
   }
 
   var rtLog = {
@@ -64,23 +63,24 @@ define(function(require) {
 
       rtLog.initTagFilter();
       loadingIcon.show();
-      rtLog.initPaging();
-    },
-
-    initPaging: function() {
-      logContent.empty();
       es.getPage(rtLog.renderLog);
-
-      logContainer.scroll(function() {
-        if (logContainer.scrollTop() >= $(document).height()) {
-          if (settings.sort === "desc") {
-            return
-          }
-          loadingIcon.show();
-          es.nextPage(rtLog.renderLog);
-        }
-      });
+      //rtLog.initPaging();
     },
+
+    // initPaging: function() {
+    //   logContent.empty();
+    //   es.getPage(rtLog.renderLog);
+
+    //   logContainer.scroll(function() {
+    //     if (logContainer.scrollTop() >= $(document).height()) {
+    //       if (settings.sort === "desc") {
+    //         return
+    //       }
+    //       loadingIcon.show();
+    //       es.nextPage(rtLog.renderLog);
+    //     }
+    //   });
+    // },
 
     getParameterByName: function(name, url) {
       if (!url) url = window.location.href;
