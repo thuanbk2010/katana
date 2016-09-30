@@ -79,19 +79,17 @@ define(['elasticsearch', 'lodash'], function(require) {
       console.error('Invalid query settings.');
     }
 
-    // if (settings.build) {
-    //   addMustFilter("buildNumber", settings.build)
-    // }
+    if (settings.build) {
+      addMustFilter("buildNumber", settings.build)
+    }
 
-    // if (settings.builder) {
-    //   addMustFilter("builderName", settings.builder)
-    // }
+    if (settings.builder) {
+      addMustFilter("builderName", settings.builder)
+    }
 
-    // if (settings.step) {
-    //   addMustFilter("step", settings.step)
-    // }
-
-    addMustFilter("path", "/Users/kateryna/pr/hackweeek/tests/logs/jam_Editor_win64.log")
+    if (settings.step) {
+      addMustFilter("step", settings.step)
+    }
   }
 
   function initQuery(settings) {
