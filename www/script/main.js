@@ -41,7 +41,8 @@ require.config({
     "precompiled.handlebars": "../generated/precompiled.handlebars",
     "elasticsearch": "libs/elasticsearch",
     "trunk8": "libs/trunk8",
-    "elasticApi": "project/elasticApi"
+    "elasticApi": "project/elasticApi",
+    "lodash": "libs/lodash"
   },
   shim: {
     "overscroll": {
@@ -78,6 +79,7 @@ define(function(require) {
 
   require('ui.preloader');
   require('overscroll');
+  require('lodash');
 
 
   // reveal the page when all scripts are loaded

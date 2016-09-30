@@ -6,19 +6,11 @@ require.deps.push('buildLog');
 <div class="log-status"></div>
 <div class="row">
     <div class="col-md-3">
-        <input id="elastic-search" type="search" class="form-control" placeholder="Search" aria-describedby="basic-addon2">
+        <input id="elastic-search" type="search" class="form-control" placeholder="Search">
     </div>
     <div class="col-md-6">
-        <input type="text" class="select2" id="field-filter" style="width:300px">
-        <!--<select class="select2" multiple="multiple" id="line-filter" style="width:300px">
-            <option value="AL">All</option>
-            <option value="Am">Error</option>
-            <option value="An">Warning</option>
-        </select>-->
-        <!--<select class="select2" multiple="multiple" id="type-filter" style="width:300px">
-        </select>
-        <select class="select2" multiple="multiple" id="tag-filter" style="width:300px">
-        </select>-->
+        <input type="text" class="select2" id="log-field-filter" style="width:200px">
+        <!--<input id="log-field-value" type="search" class="form-control" placeholder="Field value">-->
     </div>
 </div>
 <div class="row">
@@ -29,11 +21,6 @@ require.deps.push('buildLog');
     </div>
 </div>
 <div class="row">
-    <!--<div class="col-md-2">
-        <div class="filters-container">
-        </div>
-    </div>
-    <div class="col-md-10">-->
     <div class="log-container">
         <table>
             <tbody id="log-content">

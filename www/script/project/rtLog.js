@@ -9,9 +9,7 @@ define(function(require) {
   var logContainer = $('.log-container')
   var logContent = $('#log-content');
   var logStatus = $('.log-status');
-  var warningsFilter = { "match": { "error_type": "warning" } };
-  var errorFilter = { "match": { "error_type": "error" } };
-  var filters = []
+  var typeProperties = {}
 
   var instantData = JSON.parse(instantJSON.global.data);
   var connection = {
@@ -45,27 +43,23 @@ define(function(require) {
 
       $("#log-cb-errors").click(function() {
         logContent.empty();
+
         if ($(this).is(':checked')) {
-          filters.push(errorFilter)
-          es.filter(filters, rtLog.renderLog)
+          es.filter("error_type", "error", rtLog.renderLog)
         } else {
-          filters.pop(errorFilter)
-          es.clearFilter(errorFilter, rtLog.renderLog)
+          es.clearFilter("error_type", "error", rtLog.renderLog)
         }
+
       });
 
       $("#log-cb-warnings").click(function() {
         logContent.empty();
+
         if ($(this).is(':checked')) {
-          filters.push(warningsFilter)
-          es.filter(filters, rtLog.renderLog)
-
+          es.filter("error_type", "warning", rtLog.renderLog)
         } else {
-          filters.pop(warningsFilter)
-          es.clearFilter(warningsFilter, rtLog.renderLog)
+          es.clearFilter("error_type", "warning", rtLog.renderLog)
         }
-
-
       });
 
       rtLog.initTagFilter();
@@ -98,25 +92,29 @@ define(function(require) {
       return decodeURIComponent(results[2].replace(/\+/g, " "));
     },
 
-    initFilters: function() {
-      var typeFilter = $('#type-filter');
-      var lineFilter = $('#line-filter');
-      var tagFilter = $('#tag-filter');
-      var fieldFilter = $('#field-filter');
-
-      rtLog.initTagFilter();
-    },
-
     initTagFilter: function() {
       es.getMapping(function(properties) {
         var properties = Object.keys(properties)
         var items = properties.map(function(value, i) { return { id: i, text: value } })
-        $('#field-filter').select2({
+        typeProperties = items
+        var fieldSelect = $('#log-field-filter');
+        $('#log-field-filter').select2({
           data: items,
           placeholder: "Fields",
           allowClear: true,
-          multiple: true,
         });
+
+        $('#log-field-value').on('input', function() {
+          logContent.empty();
+
+          // if (!this.value) {
+          //   es.removeFilter(fieldName, rtLog.renderLog)
+          // } else {
+          //   var fieldName = typeProperties[fieldSelect.val()]
+          //   es.filter(fieldName, this.value, rtLog.renderLog, true)
+          // }
+        });
+
       })
     },
 
@@ -142,6 +140,9 @@ define(function(require) {
     },
 
     renderLogLine: function(value) {
+      if (!value.hasOwnProperty('@timestamp')) {
+        return
+      }
       var timestamp = moment(value['@timestamp'][0]).format('HH:MM:SS')
       var lineText = value.message
       var lineColor = ""

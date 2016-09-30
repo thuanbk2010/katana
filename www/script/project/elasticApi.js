@@ -1,32 +1,101 @@
 /*global define, Handlebars */
-define(['elasticsearch'], function(require) {
+define(['elasticsearch', 'lodash'], function(require) {
   "use strict";
 
-  var client, defaultSearchQuery;
+  var client,
+    esSession = {
+      defaultSearchQuery: "",
+      mustFilters: {},
+      shouldFilters: [],
+      pageNumber: 0
+    }
+
+  function addMustFilter(name, value) {
+    if (name && value) {
+      esSession.mustFilters[name] = value
+    }
+  }
+
+  function removeAllShouldFilter(name) {
+    _.remove(esSession.shouldFilters, function(filter) {
+      return filter.hasOwnProperty(name)
+    });
+  }
+
+  function addShouldFilter(name, value, replace) {
+    if (!name && !value) {
+      return
+    }
+    if (replace) {
+      removeAllShouldFilter(name)
+    }
+    var entry = {}
+    entry[name] = value
+    esSession.shouldFilters.push(entry)
+
+  }
+
+  function clearMustFilter(name) {
+    delete esSession.mustFilters[name]
+  }
+
+  function clearShouldFilter(name, value) {
+    var entry = {}
+    entry[name] = value
+    _.remove(esSession.shouldFilters, entry)
+  }
+
+  function getMustMatch(dict) {
+    var result = []
+    for (var key in dict) {
+      if (dict.hasOwnProperty(key)) {
+        var obj = {}
+        obj[key] = dict[key]
+        result.push({ "match": obj });
+      }
+    }
+    return result;
+  }
+
+  function getShouldMatch(dict) {
+    return esSession.shouldFilters.map(function(value) { return { "match": value } })
+  }
 
   function connect(connection, settings) {
     client = prepareElasticSearch(connection)
-    defaultSearchQuery = prepareSearchQuery(settings)
+    esSession.defaultSearchQuery = initQuery(settings)
   }
 
-  function prepareSearchQuery(settings) {
+  function prepareSearchQuery() {
+    var searchQuery = esSession.defaultSearchQuery
+    searchQuery.from = esSession.pageNumber * searchQuery.size
+    searchQuery.body['query']['constant_score']['query']['bool']['should'] = getShouldMatch(esSession.shouldFilters)
+    searchQuery.body['query']['constant_score']['query']['bool']['must'] = getMustMatch(esSession.mustFilters)
+    return searchQuery
+  }
+
+  function applyDefaultFilters(settings) {
     if (!settings) {
       console.error('Invalid query settings.');
     }
 
-    var must = []
-    if (settings.build) {
-      must.push({ "match": { "buildNumber": settings.build } })
-    }
+    // if (settings.build) {
+    //   addMustFilter("buildNumber", settings.build)
+    // }
 
-    if (settings.builder) {
-      must.push({ "match": { "builderName": settings.builder } })
-    }
+    // if (settings.builder) {
+    //   addMustFilter("builderName", settings.builder)
+    // }
 
-    if (settings.step) {
-      must.push({ "match": { "step": settings.step } })
-    }
+    // if (settings.step) {
+    //   addMustFilter("step", settings.step)
+    // }
 
+    addMustFilter("path", "/Users/kateryna/pr/hackweeek/tests/logs/jam_Editor_win64.log")
+  }
+
+  function initQuery(settings) {
+    applyDefaultFilters(settings)
     return {
       index: settings.index,
       from: (settings.pageNum - 1) * settings.perPage,
@@ -36,12 +105,15 @@ define(['elasticsearch'], function(require) {
           "constant_score": {
             "query": {
               "bool": {
-                "must": must,
+                "must": [],
                 "should": []
               }
             }
           }
-        }
+        },
+        "sort": [
+          { "@timestamp": { "order": "asc" } }
+        ]
       }
     }
   }
@@ -72,17 +144,10 @@ define(['elasticsearch'], function(require) {
     return client;
   }
 
-  function search(searchQuery, renderCallback) {
-    client.search(searchQuery)
-      .then(function(resp) {
-        renderCallback(resp);
-      }, function(err) {
-        console.trace(err.message);
-      });
-  }
-
   function getPage(renderCallback) {
-    client.search(defaultSearchQuery)
+    esSession.pageNumber = 0
+    var query = prepareSearchQuery()
+    client.search(query)
       .then(function(resp) {
         renderCallback(resp);
       }, function(err) {
@@ -91,99 +156,59 @@ define(['elasticsearch'], function(require) {
   }
 
   function nextPage(renderCallback) {
-    var searchQuery = defaultSearchQuery
-    searchQuery.from = searchQuery.from + searchQuery.size
-
-    client.search(searchQuery)
-      .then(function(resp) {
-        renderCallback(resp);
-      }, function(err) {
-        console.trace(err.message);
-      });
+    esSession.pageNumber++;
+    getPage(renderCallback)
   }
 
-  function getShouldQuery(value) {
+  function parseSearchValue(value) {
     if (!value) {
-      return []
+      removeAllShouldFilter('_all')
+      return
     }
     if (value.indexOf(':') === -1) {
-      return [{ "match": { "_all": value } }]
-
+      addShouldFilter("_all", value, true)
     }
     var terms = value.split('|');
     var should = [];
     terms.forEach(function(value) {
       var field = value.split(':');
       if (field.length === 2) {
-
-        var jsonVariable = {};
-        jsonVariable[field[0]] = field[1]
-        should.push({ "match": jsonVariable });
+        addShouldFilter(field[0], field[1], true)
       }
     })
-
-    return should
   }
 
   function filterAll(value, renderCallback) {
-    var searchQuery = defaultSearchQuery
-
-    var should = getShouldQuery(value)
-    if (should) {
-      searchQuery.body['query']['constant_score']['query']['bool']['should'] = should
-    }
-    searchQuery.from = 0;
-
-    client.search(searchQuery)
-      .then(function(resp) {
-        renderCallback(resp);
-      }, function(err) {
-        console.trace(err.message);
-      });
+    parseSearchValue(value)
+    getPage(renderCallback)
   }
 
-  function filter(shoulds, renderCallback) {
-    var searchQuery = defaultSearchQuery
-    var must = searchQuery.body['query']['constant_score']['query']['bool']['must'];
-    if (shoulds) {
-      searchQuery.body['query']['constant_score']['query']['bool']['must'] = must.concat(shoulds)
-    }
-    searchQuery.from = 0;
+  function filter(name, value, renderCallback) {
+    var searchQuery = esSession.defaultSearchQuery
 
-    client.search(searchQuery)
-      .then(function(resp) {
-        renderCallback(resp);
-      }, function(err) {
-        console.trace(err.message);
-      });
+    addShouldFilter(name, value)
+
+    getPage(renderCallback)
   }
 
-  function clearFilter(should, renderCallback) {
-    var searchQuery = defaultSearchQuery
+  function clearFilter(name, value, renderCallback) {
+    var searchQuery = esSession.defaultSearchQuery;
 
-    if (should) {
-      searchQuery.body['query']['constant_score']['query']['bool']['must'].pop(should)
-    }
-    searchQuery.from = 0;
+    clearShouldFilter(name, value);
 
-    client.search(searchQuery)
-      .then(function(resp) {
-        renderCallback(resp);
-      }, function(err) {
-        console.trace(err.message);
-      });
+    getPage(renderCallback);
   }
+
 
   function getMapping(callback) {
-    client.indices.getMapping({ index: defaultSearchQuery.index }, function(error, resp) {
+    client.indices.getMapping({ index: esSession.defaultSearchQuery.index }, function(error, resp) {
       if (error) {
         console.log(error);
       } else {
         var keys = Object.keys(resp)
         if (keys && keys.length) {
           var index = keys[0]
-          var properties = resp[index].mappings.logs.properties ||
-            resp[defaultSearchQuery.index].mappings.properties
+          var properties = resp[index].mappings.logs.properties
           callback(properties)
         }
       }
