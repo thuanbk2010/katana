@@ -201,7 +201,7 @@ class TestAbstractBuildSlave(unittest.TestCase):
         slave = yield self.setUpSlaveService(pause=True)
         self.assertTrue(not self.shuttingDown(slave))
         yield slave.stopService()
-        self.assertTrue(self.shuttingDown(slave))
+        self.assertTrue(not self.shuttingDown(slave))
 
     @defer.inlineCallbacks
     def test_stopServiceIdleSlave(self):

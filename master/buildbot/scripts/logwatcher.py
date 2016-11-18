@@ -36,7 +36,7 @@ class TailProcess(protocol.ProcessProtocol):
 
 class LogWatcher(LineOnlyReceiver):
     POLL_INTERVAL = 0.1
-    TIMEOUT_DELAY = 10.0
+    TIMEOUT_DELAY = 30.0
     delimiter = os.linesep
 
     def __init__(self, logfile):
@@ -109,7 +109,8 @@ class LogWatcher(LineOnlyReceiver):
         # certain lines indicate progress, so we "cancel" the timeout
         # and it will get re-added when it fires
         PROGRESS_TEXT = ['Starting BuildMaster', 'Loading configuration from', 
-                'added builder', 'adding scheduler', 'Loading builder', 'Starting factory']
+                'added builder', 'adding scheduler', 'Loading builder', 'Starting factory',
+                'attached to']
         for progressText in PROGRESS_TEXT:
             if progressText in line:
                 self.timer = None
