@@ -248,11 +248,6 @@ class AbstractBuildSlave(config.ReconfigurableServiceMixin, pb.Avatar,
 
     @defer.inlineCallbacks
     def stopService(self):
-        # TODO: This should be removed when the slave information is persisted
-        if self.slave_status.isPaused():
-            log.msg("Warning: slave '%s' is paused, will disconnect" % self.slave_status.name)
-            yield self.shutdown()
-
         if self.registration:
             self.registration.unregister()
             self.registration = None
