@@ -252,6 +252,8 @@ class HgPoller(base.PollingChangeSource, StateMixin):
             # we could have used current = -1 convention as well (as hg does)
             revrange = '%s:%s' % (head, head)
         else:
+            if ":" in current: # for backwards compatibility
+                current = current.split(":")[1] # gives a {node|short}
             revrange = '%s:%s' % (current, head)
 
         # two passes for hg log makes parsing simpler (comments is multi-lines)

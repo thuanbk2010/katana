@@ -26,11 +26,13 @@ class TestCustomPoller(unittest.TestCase):
         for i in range(len(changes_added)):
             self.assertEqual(changes_added[i].asDict(), expected_changes[i].asDict())
 
-    def setup(self, poller):
-        poller._absWorkdir = lambda: "dir/"
+    def setup_lastRev(self, poller):
         poller.lastRev = {"1.0/dev": "835be7494fb405bbe2605e1075102790e604938a",
                           "stable": "05bbe2605e1075102790e6049384e1de6bb28b28"}
 
+    def setup(self, poller):
+        poller._absWorkdir = lambda: "dir/"
+        self.setup_lastRev(poller)
         poller.master = Mock()
         self.changes_added = []
 
@@ -63,6 +65,20 @@ class TestCustomPoller(unittest.TestCase):
                        category=None, project='', repository=repository,
                        codebase=None)]
 
+    def add_expected_commands_for_processBranches(self):
+        self.expected_commands.append({'command': ['log', '-b', 'trunkbookmark', '-r',
+                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7:' +
+                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
+                                                   '--template={node}\\n'],
+                                       'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
+
+        self.expected_commands.append({'command':  ['log', '-b', '1.0/dev', '-r',
+                                                    '835be7494fb405bbe2605e1075102790e604938a:117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
+                                                    '--template={node}\\n'],
+                                       'stdout': defer.succeed('5553a6194a6393dfbec82f96654d52a76ddf844d\n' +
+                                                               'b2e48cbab3f0753f99db833acff6ca18096854bd\n' +
+                                                               '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486\n')})
+
     @defer.inlineCallbacks
     def test_mercurialPollsAnyBranch(self):
         poller = HgPoller(repourl='http://hg.repo.org/src',
@@ -91,23 +107,12 @@ class TestCustomPoller(unittest.TestCase):
         self.expected_commands.append({'command': ['heads', 'trunkbookmark', '--template={node}\n'],
                                        'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
 
-        self.expected_commands.append({'command': ['log', '-b', 'trunkbookmark', '-r',
-                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7:' +
-                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
-                                                   '--template={node}\\n'],
-                                       'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
+        self.add_expected_commands_for_processBranches()
 
         self.expected_commands.append({'command': ['log', '-r', '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
                                                    '--template={date|hgdate}\\n{author}\\n{desc|strip}'],
                                        'stdout':
                                            defer.succeed('1422983233 -3600\ndev4 <dev4@mail.com>\nlist of changes4')})
-
-        self.expected_commands.append({'command':  ['log', '-b', '1.0/dev', '-r',
-                                                    '835be7494fb405bbe2605e1075102790e604938a:117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
-                                                    '--template={node}\\n'],
-                                       'stdout': defer.succeed('5553a6194a6393dfbec82f96654d52a76ddf844d\n' +
-                                                               'b2e48cbab3f0753f99db833acff6ca18096854bd\n' +
-                                                               '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486\n')})
 
         self.expected_commands.append({'command': ['log', '-r', '5553a6194a6393dfbec82f96654d52a76ddf844d',
                                                    '--template={date|hgdate}\\n{author}\\n{desc|strip}'],
