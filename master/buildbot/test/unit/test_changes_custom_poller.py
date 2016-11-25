@@ -167,7 +167,10 @@ class TestCustomPoller(unittest.TestCase):
 
         expected_changes = self.getExpectedChangesHg(repository='http://hg.repo.org/src')
 
-        self.checkChangesList(self.changes_added, expected_changes)
+        changes_added = sorted(self.changes_added, key=lambda change: change.when)
+        expected_changes = sorted(expected_changes, key=lambda change : change.when)
+
+        self.checkChangesList(changes_added, expected_changes)
 
 
     @defer.inlineCallbacks
