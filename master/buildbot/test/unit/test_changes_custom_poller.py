@@ -28,7 +28,10 @@ class TestCustomPoller(unittest.TestCase):
 
     def setup_lastRev(self, poller):
         poller.lastRev = {"1.0/dev": "835be7494fb405bbe2605e1075102790e604938a",
-                          "stable": "05bbe2605e1075102790e6049384e1de6bb28b28"}
+                          "stable": "05bbe2605e1075102790e6049384e1de6bb28b28",
+                          "1.0/devOld": "1:625be7494fb5", # for testing backwards compatibility with db
+                          "stableOld": "3:05bbe2605e10" # for testing backwards compatibility with db
+        }
 
     def setup(self, poller):
         poller._absWorkdir = lambda: "dir/"
@@ -63,21 +66,31 @@ class TestCustomPoller(unittest.TestCase):
                        who=u'dev4 <dev4@mail.com>', branch=u'trunkbookmark' if bookmark else u'trunk',
                        comments=u'list of changes4', when=1422983233,
                        category=None, project='', repository=repository,
-                       codebase=None)]
+                       codebase=None)
+                ]
 
-    def add_expected_commands_for_processBranches(self):
-        self.expected_commands.append({'command': ['log', '-b', 'trunkbookmark', '-r',
-                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7:' +
-                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
+    def getExpectedChangesHg(self, repository, bookmark=True):
+        return self.getExpectedChanges(repository, bookmark) + [
+                # backwards compatibility
+                Change(revision=u'68475k937dj69dk20567845jh9456726153hv47g7', files=None,
+                       who=u'dev5 <dev5@mail.com>', branch=u'1.0/devOld', comments=u'list of changes5',
+                       when=1421667231, category=None, project='',
+                       repository=repository, codebase=None),
+                ]
+
+    def add_backwards_compatibility_with_db_commands(self):
+        self.expected_commands.append({'command': ['heads', '1.0/devOld', '--template={node}\n'],
+                                       'stdout': defer.succeed('68475k937dj69dk20567845jh9456726153hv47g7')})
+
+        self.expected_commands.append({'command': ['log', '-b', '1.0/devOld', '-r',
+                                                   '625be7494fb5:68475k937dj69dk20567845jh9456726153hv47g7',
                                                    '--template={node}\\n'],
-                                       'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
+                                       'stdout': defer.succeed('68475k937dj69dk20567845jh9456726153hv47g7\n')})
 
-        self.expected_commands.append({'command':  ['log', '-b', '1.0/dev', '-r',
-                                                    '835be7494fb405bbe2605e1075102790e604938a:117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
-                                                    '--template={node}\\n'],
-                                       'stdout': defer.succeed('5553a6194a6393dfbec82f96654d52a76ddf844d\n' +
-                                                               'b2e48cbab3f0753f99db833acff6ca18096854bd\n' +
-                                                               '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486\n')})
+        self.expected_commands.append({'command': ['log', '-r', '68475k937dj69dk20567845jh9456726153hv47g7',
+                                                   '--template={date|hgdate}\\n{author}\\n{desc|strip}'],
+                                       'stdout':
+                                           defer.succeed('1421667231 -3600\ndev5 <dev5@mail.com>\nlist of changes5')})
 
     @defer.inlineCallbacks
     def test_mercurialPollsAnyBranch(self):
@@ -94,12 +107,16 @@ class TestCustomPoller(unittest.TestCase):
                              'stdout': 'default defaultbookmark 5cf71f97924e345114567b95a652a1s324d7b5bf\n' +
                                        '5.0/dev  960963s2fde73453564f64675y667k34e6h4d890\n' +
                                        '1.0/dev  117b9a27b5bf65d7e7b5edb48f7fd59dc4170486\n' +
-                                       'trunk  trunkbookmark 70fc4de2ff3828a587d80f7528c1b5314c51550e7\n'}]
+                                       'trunk  trunkbookmark 70fc4de2ff3828a587d80f7528c1b5314c51550e7\n' +
+                                       '1.0/devOld  68475k937dj69dk20567845jh9456726153hv47g7\n' # backwards compatibility
+                                }]
 
         yield poller._processBranches(None)
 
         self.assertEqual(poller.currentRev, {'1.0/dev': '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
-                                             'trunkbookmark': '70fc4de2ff3828a587d80f7528c1b5314c51550e7'})
+                                             'trunkbookmark': '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
+                                             '1.0/devOld': '68475k937dj69dk20567845jh9456726153hv47g7' # backwards compatibility
+                                             })
 
         self.expected_commands.append({'command': ['heads', '1.0/dev', '--template={node}\n'],
                                        'stdout': defer.succeed('117b9a27b5bf65d7e7b5edb48f7fd59dc4170486')})
@@ -107,7 +124,20 @@ class TestCustomPoller(unittest.TestCase):
         self.expected_commands.append({'command': ['heads', 'trunkbookmark', '--template={node}\n'],
                                        'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
 
-        self.add_expected_commands_for_processBranches()
+        self.expected_commands.append({'command': ['log', '-b', 'trunkbookmark', '-r',
+                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7:' +
+                                                   '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
+                                                   '--template={node}\\n'],
+                                       'stdout': defer.succeed('70fc4de2ff3828a587d80f7528c1b5314c51550e7')})
+
+        self.expected_commands.append({'command': ['log', '-b', '1.0/dev', '-r',
+                                                   '835be7494fb405bbe2605e1075102790e604938a:117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
+                                                   '--template={node}\\n'],
+                                       'stdout': defer.succeed('5553a6194a6393dfbec82f96654d52a76ddf844d\n' +
+                                                               'b2e48cbab3f0753f99db833acff6ca18096854bd\n' +
+                                                               '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486\n')})
+
+        self.add_backwards_compatibility_with_db_commands()
 
         self.expected_commands.append({'command': ['log', '-r', '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
                                                    '--template={date|hgdate}\\n{author}\\n{desc|strip}'],
@@ -132,9 +162,10 @@ class TestCustomPoller(unittest.TestCase):
         yield poller._processChangesAllBranches(None)
 
         self.assertEqual(poller.lastRev, {'1.0/dev': '117b9a27b5bf65d7e7b5edb48f7fd59dc4170486',
-                                          'trunkbookmark': '70fc4de2ff3828a587d80f7528c1b5314c51550e7'})
+                                          'trunkbookmark': '70fc4de2ff3828a587d80f7528c1b5314c51550e7',
+                                          '1.0/devOld': '68475k937dj69dk20567845jh9456726153hv47g7',})
 
-        expected_changes = self.getExpectedChanges(repository='http://hg.repo.org/src')
+        expected_changes = self.getExpectedChangesHg(repository='http://hg.repo.org/src')
 
         self.checkChangesList(self.changes_added, expected_changes)
 
