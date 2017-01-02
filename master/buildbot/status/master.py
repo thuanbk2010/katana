@@ -464,6 +464,7 @@ class Status(config.ReconfigurableServiceMixin, service.MultiService):
                 builder_status = load(f)
             builder_status.master = self.master
             builder_status.basedir = os.path.join(self.basedir, basedir)
+            builder_status.setCacheSize(self.master.config.caches)
 
             # (bug #1068) if we need to upgrade, we probably need to rewrite
             # this pickle, too.  We determine this by looking at the list of
@@ -485,6 +486,7 @@ class Status(config.ReconfigurableServiceMixin, service.MultiService):
         if not builder_status:
             builder_status = builder.BuilderStatus(name, category, self.master, friendly_name,
                                                    description, project=project)
+            builder_status.setCacheSize(self.master.config.caches)
             builder_status.addPointEvent(["builder", "created"])
         log.msg("added builder %s in category %s" % (name, category))
         # an unpickled object might not have category set from before,
