@@ -16,7 +16,7 @@
 import mock
 from twisted.trial import unittest
 from twisted.internet import defer
-from buildbot.status import master, base, builder
+from buildbot.status import master, base
 from buildbot.test.fake import fakedb
 
 class FakeStatusReceiver(base.StatusReceiver):
@@ -47,38 +47,6 @@ class TestStatus(unittest.TestCase):
             self.assertEqual([ bs.id for bs in bslist ], [ 91 ])
         d.addCallback(check)
         return d
-
-    @mock.patch('__builtin__.open')
-    def test_cacheSizeIsSetFromConfigWithPickleFailure(self, mock_open):
-        m = mock.MagicMock(name='master')
-        m.config = mock.MagicMock(name='config')
-        m.config.caches = {'Builds': 3}
-        self.db = m.db = fakedb.FakeDBConnector(self)
-        m.basedir = r'C:\BASEDIR'
-        s = master.Status(m)
-
-        def make_ioerror(*args):
-            raise IOError('test')
-
-        mock_open.side_effect = make_ioerror
-
-        status = s.builderAdded('builder-1', '.')
-        assert status.buildCache.max_size == 3
-
-    @mock.patch('buildbot.status.master.load')
-    @mock.patch('__builtin__.open')
-    def test_cacheSizeIsSetFromConfigWithPickleLoad(self, mock_open, mock_pickle):
-        m = mock.MagicMock(name='master')
-        m.config = mock.MagicMock(name='config')
-        m.config.caches = {'Builds': 3}
-        self.db = m.db = fakedb.FakeDBConnector(self)
-        m.basedir = r'C:\BASEDIR'
-        s = master.Status(m)
-
-        mock_pickle.return_value = builder.BuilderStatus('builder-name', 'builder-category', m)
-
-        status = s.builderAdded('builder-1', '.')
-        assert status.buildCache.max_size == 3
 
     @defer.inlineCallbacks
     def test_reconfigService(self):
