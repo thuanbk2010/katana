@@ -216,7 +216,7 @@ define(["jquery", "realtimePages", "rtGlobal"], function ($, rt, rtGlobal) {
         });
 
         it("becomes full when build load is very high", function () {
-            var customData = $.extend({}, rtGlobalData, {build_load: 1000});
+            var customData = $.extend({}, rtGlobalData, {build_load: 2000});
             rtGlobal.processGlobalInfo(customData);
             var isFull = rtGlobal.isKatanaFull();
 
