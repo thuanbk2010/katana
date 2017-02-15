@@ -29,7 +29,6 @@ from collections import deque
 from tempfile import NamedTemporaryFile
 
 from twisted.python import runtime, log
-from twisted.python.win32 import quoteArguments
 from twisted.internet import reactor, defer, protocol, task, error
 
 from buildslave import util
@@ -59,6 +58,27 @@ def shell_quote(cmd_list):
                 return '""'
             return pipes.quote(e)
         return " ".join([ quote(e) for e in cmd_list ])
+
+
+# cmdLineQuote and quoteArguments are basically a copy from twisted.python.win32, but also quoting
+# strings that contain '<' or '>'
+_cmdLineQuoteRe = re.compile(r'(\\*)"')
+_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+def cmdLineQuote(s):
+    """
+    @see twisted.python.win32.cmdLineQuote
+
+    Added some extra code to quote strings that contain '<' or '>'
+    """
+    quote = ((" " in s) or ("\t" in s) or ('"' in s) or ('<' in s) or ('>' in s) or s == '') and '"' or ''
+    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+
+def quoteArguments(arguments):
+    """
+    @see twisted.python.win32.quoteArguments
+    """
+    return ' '.join([cmdLineQuote(a) for a in arguments])
+
 
 class LogFileWatcher:
     POLL_INTERVAL = 2
