@@ -201,9 +201,27 @@ class RemoteCommand(pb.Referenceable):
         self.buildslave.messageReceivedFromSlave()
         # call the real remoteComplete a moment later, but first return an
         # acknowledgement so the slave can retire the completion message.
+
+        self.unregisterCommandReference()
+
         if self.active:
             eventually(self._finished, failure)
         return None
+
+    def unregisterCommandReference(self):
+        """
+        Called when remote command has finished.
+
+        This function makes sure the object gets unregister  from self.remote.broker after the command finished
+        preventing "Maximum PB reference count exceeded." error
+        :return:
+        """
+
+        processUniqueID = self.processUniqueID()
+        localUniqueID = self.remote.broker.luids.get(processUniqueID)
+
+        if localUniqueID and localUniqueID in self.remote.broker.localObjects:
+            self.remote.broker.proto_decref(localUniqueID)
 
     def addStdout(self, data):
         if 'stdio' in self.logs:
