@@ -24,6 +24,7 @@ from buildbot.status.results import FAILURE, SUCCESS, WARNINGS, EXCEPTION, SKIPP
 from buildbot.test.fake import fakebuild, remotecommand
 from buildbot.test.util import config, steps, compat
 from buildbot.util.eventual import eventually
+from twisted.spread import pb
 
 class FakeLogFile:
     def __init__(self, text):
@@ -428,3 +429,26 @@ class TestFakeRemoteShellCommand(unittest.TestCase, RemoteShellCommandTests):
 
     def makeRemoteShellCommand(self, *args, **kwargs):
         return remotecommand.FakeRemoteShellCommand(*args, **kwargs)
+
+
+class TestRemoteShellCommand(unittest.TestCase):
+
+    def setUp(self):
+        self.step = buildstep.RemoteShellCommand("build", ["echo", "hello"])
+        self.step.buildslave = self.step.remote = mock.Mock()
+        self.step.processUniqueID = lambda: 2
+        self.step.remote.broker = pb.Broker()
+
+    def test_remote_complete_unregisterCommandReference(self):
+        self.step.remote.broker.luids = {2: 1}
+        self.step.remote.broker.localObjects = {1: pb.Local(self.step)}
+        self.step.remote_complete()
+        self.assertEqual(self.step.remote.broker.localObjects, {})
+        self.assertEqual(self.step.remote.broker.luids, {})
+
+    def test_remote_complete_commandReferenceNotInBroker(self):
+        self.step.remote.broker.luids = expectedLuids = {3: 2}
+        self.step.remote.broker.localObjects = expectedObjects = {2: pb.Local(mock.Mock())}
+        self.step.remote_complete()
+        self.assertEqual(self.step.remote.broker.localObjects, expectedObjects)
+        self.assertEqual(self.step.remote.broker.luids, expectedLuids)
