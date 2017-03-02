@@ -212,7 +212,7 @@ class RemoteCommand(pb.Referenceable):
         """
         Called when remote command has finished.
 
-        This function makes sure the object gets unregister  from self.remote.broker after the command finished
+        This function makes sure the object gets unregistered from self.remote.broker after the command finished
         preventing "Maximum PB reference count exceeded." error
         :return:
         """
