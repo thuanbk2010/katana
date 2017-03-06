@@ -16,6 +16,7 @@
 import twisted
 from twisted.python import versions
 from buildbot.util import sautils
+from buildbot.monkeypatches import twistedBroker
 
 # NOTE: all of these patches test for applicability *before* importing the
 # patch module.  This will help cut down on unnecessary imports where the
@@ -75,6 +76,8 @@ def patch_all(for_tests=False):
     patch_sqlalchemy2364()
     patch_sqlalchemy2189()
     patch_gatherResults()
+    twistedBroker.patch_proto_decref()
+
 
     if for_tests:
         from buildbot.monkeypatches import servicechecks
