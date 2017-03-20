@@ -1173,6 +1173,9 @@ class KatanaBuildRequestDistributor(service.Service):
 
     @defer.inlineCallbacks
     def _procesBuildRequestsActivityLoop(self):
+        if self.master.changeServicesStateRunning():
+            return
+
         self.active = True
 
         timer = timerLogStart(msg="_procesBuildRequestsActivityLoop ",
@@ -1181,7 +1184,9 @@ class KatanaBuildRequestDistributor(service.Service):
         while 1:
             yield self.activity_lock.acquire()
 
-            self.active = self.running and (self.check_new_builds or self.check_resume_builds)
+            self.active = (not self.master.changeServicesStateRunning() and
+                           self.running and (self.check_new_builds or self.check_resume_builds))
+
             # bail out if we shouldn't keep looping
             if not self.active:
                 self.activity_lock.release()

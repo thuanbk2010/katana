@@ -93,6 +93,8 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
         self.reconfig_active = False
         self.reconfig_requested = False
         self.reconfig_notifier = None
+        self.change_services_state = False
+        self.change_service_lock = defer.DeferredLock()
 
         # this stores parameters used in the tac file, and is accessed by the
         # WebStatus to duplicate those values.
@@ -231,9 +233,12 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
             self.db_loop.stop()
             self.db_loop = None
 
+        yield self.changeServicesStateStarted()
+
         if self.running:
             yield service.MultiService.stopService(self)
 
+        self.changeServicesStateFinished()
 
     def reconfig(self):
         # this method wraps doConfig, ensuring it is only ever called once at
@@ -306,6 +311,8 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
 
     @defer.inlineCallbacks
     def reconfigService(self, new_config):
+        yield self.changeServicesStateStarted()
+
         # check configured db
         if self.configured_db_url is None:
             self.configured_db_url = new_config.db['db_url']
@@ -328,6 +335,7 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
         # reconfigure all the services
         yield config.ReconfigurableServiceMixin.reconfigService(self, new_config)
         # try to start the builds after all the services are configured
+        self.changeServicesStateFinished()
         self.botmaster.maybeStartBuildsForAllBuilders()
 
         # adjust the db poller
@@ -338,6 +346,19 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
         if self.configured_poll_interval:
             self.db_loop = task.LoopingCall(self.pollDatabase)
             self.db_loop.start(self.configured_poll_interval, now=False)
+
+    def changeServicesStateFinished(self):
+        self.change_services_state = False
+        self.change_service_lock.release()
+
+    @defer.inlineCallbacks
+    def changeServicesStateStarted(self):
+        if not self.change_service_lock.waiting:
+            yield self.change_service_lock.acquire()
+            self.change_services_state = True
+
+    def changeServicesStateRunning(self):
+        return self.change_services_state
 
     ## informational methods
 
