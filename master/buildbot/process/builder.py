@@ -102,6 +102,8 @@ class Builder(config.ReconfigurableServiceMixin,
                     builder_config.description,
                     project=builder_config.project)
 
+        self.reconfigSlaves(builder_config)
+
         self.config = builder_config
 
         self.builder_status.setDescription(builder_config.description)
@@ -114,6 +116,28 @@ class Builder(config.ReconfigurableServiceMixin,
         self.builder_status.setTags(builder_config.tags)
 
         return defer.succeed(None)
+
+    def reconfigSlaves(self, builder_config):
+        if self.config:
+            currentSlaves = self.config.slavenames + (self.config.startSlavenames or [])
+
+            newSlaves = builder_config.slavenames + (builder_config.startSlavenames or [])
+
+            removedSlaves = set(currentSlaves) - set(newSlaves)
+
+            if removedSlaves:
+                slaves = {sb.slave.slavename: sb.slave for sb in self.getAllSlaves()}
+
+                for build in self.building:
+                    if build.slavename in removedSlaves:
+                        build.currentStep.step_status.stepFinished(RETRY)
+                        build.currentStep.finished(RETRY)
+
+                        build.buildFinished(["Builder has been reconfigured, will retry"], RETRY)
+
+                for slavename in removedSlaves:
+                    slave = slaves.get(slavename)
+                    self.detached(slave, buildername=self.name)
 
     def stopService(self):
 
@@ -270,10 +294,12 @@ class Builder(config.ReconfigurableServiceMixin,
                                            slave.slavename])
         # TODO: add an HTMLLogFile of the exception
 
-    def detached(self, slave):
+    def detached(self, slave, buildername=None):
         """This is called when the connection to the bot is lost."""
         for sb in self.attaching_slaves + self.getAllSlaves():
             if sb.slave == slave:
+                if buildername and buildername != sb.builder.name:
+                    continue
                 break
         else:
             log.msg("WEIRD: Builder.detached(%s) (%s)"
