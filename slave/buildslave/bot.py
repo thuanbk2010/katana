@@ -232,7 +232,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             d = self.remoteStep.callRemote("complete", failure)
             d.addCallback(self.ackComplete)
             # Check ack if builder still attach to slave
-            if self.name in self.bot.services:
+            if self.name in self.bot.builders.keys():
                 d.addErrback(self._ackFailed, "sendComplete")
             else:
                 log.msg("Builder % has been detached %s" % self.name)
