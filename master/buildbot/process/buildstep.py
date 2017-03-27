@@ -1023,6 +1023,9 @@ class LoggingBuildStep(BuildStep):
         if self.cmd:
             d = self.cmd.interrupt(reason)
             d.addErrback(log.err, 'while interrupting command')
+            return d
+
+        return defer.succeed(None)
 
     def checkDisconnect(self, f):
         f.trap(error.ConnectionLost)

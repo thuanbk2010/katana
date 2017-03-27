@@ -128,13 +128,6 @@ class Builder(config.ReconfigurableServiceMixin,
             if removedSlaves:
                 slaves = {sb.slave.slavename: sb.slave for sb in self.getAllSlaves()}
 
-                for build in self.building:
-                    if build.slavename in removedSlaves:
-                        build.currentStep.step_status.stepFinished(RETRY)
-                        build.currentStep.finished(RETRY)
-
-                        build.buildFinished(["Builder has been reconfigured, will retry"], RETRY)
-
                 for slavename in removedSlaves:
                     slave = slaves.get(slavename)
                     self.detached(slave, buildername=self.name)

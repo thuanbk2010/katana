@@ -558,7 +558,7 @@ class Build(properties.PropertiesMixin):
                 lock.stopWaitingUntilAvailable(self, access, d)
                 d.callback(None)
 
-    def stopBuild(self, reason="<no reason given>"):
+    def stopBuild(self, reason="<no reason given>", result=None):
         # the idea here is to let the user cancel a build because, e.g.,
         # they realized they committed a bug and they don't want to waste
         # the time building something that they know will fail. Another
@@ -573,14 +573,17 @@ class Build(properties.PropertiesMixin):
         self.builder.builder_status.addPointEvent(['interrupt'])
         self.stopped = True
         if self.currentStep:
-            self.currentStep.interrupt(reason)
+            interruptDeferred = self.currentStep.interrupt(reason)
 
-        self.result = INTERRUPTED
+        # TODO: validate result is valid katana result
+        self.result = INTERRUPTED if result is None else result
 
         if self._acquiringLock:
             lock, access, d = self._acquiringLock
             lock.stopWaitingUntilAvailable(self, access, d)
             d.callback(None)
+
+        return interruptDeferred
 
     def allStepsDone(self):
         if self.result == FAILURE or self.result == DEPENDENCY_FAILURE:
