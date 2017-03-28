@@ -638,6 +638,7 @@ class Builder(config.ReconfigurableServiceMixin,
     def _resubmit_buildreqs(self, out=None, requests=None):
         brids = [br.id for br in requests]
         yield self.master.db.buildrequests.unclaimBuildRequests(brids, results=BEGINNING)
+        self.master.botmaster.maybeStartBuildsForBuilder(self.name)
         defer.returnValue(out)
 
     def setExpectations(self, progress):
