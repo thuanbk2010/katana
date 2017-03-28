@@ -130,7 +130,8 @@ class Builder(config.ReconfigurableServiceMixin,
 
                 for slavename in removedSlaves:
                     slave = slaves.get(slavename)
-                    self.detached(slave, buildername=self.name)
+                    if slave:
+                        self.detached(slave)
 
     def stopService(self):
 
@@ -291,8 +292,6 @@ class Builder(config.ReconfigurableServiceMixin,
         """This is called when the connection to the bot is lost."""
         for sb in self.attaching_slaves + self.getAllSlaves():
             if sb.slave == slave:
-                if buildername and buildername != sb.builder.name:
-                    continue
                 break
         else:
             log.msg("WEIRD: Builder.detached(%s) (%s)"

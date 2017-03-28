@@ -243,7 +243,7 @@ class AbstractBuildSlave(config.ReconfigurableServiceMixin, pb.Avatar,
         # update the attached slave's notion of which builders are attached.
         # This assumes that the relevant builders have already been configured,
         # which is why the reconfig_priority is set low in this class.
-        yield self.updateRemoveBuilders()
+        yield self.updateRemovedBuilders()
         yield self.updateSlave()
 
         yield config.ReconfigurableServiceMixin.reconfigService(self,
@@ -345,29 +345,45 @@ class AbstractBuildSlave(config.ReconfigurableServiceMixin, pb.Avatar,
         return self._mail_missing_message(subject, text)
 
     @defer.inlineCallbacks
-    def updateRemoveBuilders(self):
-        our_builders = self.botmaster.getBuildersForSlave(self.slavename)
-        blist = [(b.name, b.config.slavebuilddir) for b in our_builders]
-        if blist == self._old_builder_list:
+    def updateRemovedBuilders(self):
+        if not self._old_builder_list:
             return
 
-        if self.slave_status.runningBuilds:
-            removedBuilderList = set(self._old_builder_list) - set(blist)
+        current_builders = [b.name for b in self.botmaster.getBuildersForSlave(self.slavename)]
+        previous_builers = [name for name, slavebuilddir in self._old_builder_list]
+
+        if current_builders == previous_builers:
+            return
+
+        @defer.inlineCallbacks
+        def stopBuild(master, build_status, result, reason):
+            c = interfaces.IControl(master)
+            buildername = build_status.getBuilder().getName()
+            bldrc = c.getBuilder(buildername)
+            if bldrc:
+                bldc = bldrc.getBuild(build_status.getNumber())
+                if bldc:
+                    yield bldc.stopBuild(reason=reason, result=result)
+                    log.msg("bldc.stopBuild")
+                    self.master.botmaster.maybeStartBuildsForBuilder(buildername)
+
+            defer.succeed(None)
+
+        removedBuilderList = set(previous_builers) - set(current_builders)
+
+        if removedBuilderList and self.slave_status.runningBuilds:
             for build_status in self.slave_status.runningBuilds:
                 buildername = build_status.getBuilder().getName()
-                for builder in removedBuilderList:
-                    if buildername in builder:
-                        c = interfaces.IControl(self.master)
-                        bldrc = c.getBuilder(build_status.getBuilder().getName())
-                        if bldrc:
-                            bldc = bldrc.getBuild(build_status.getNumber())
-                            if bldc:
-                                selected_slave = build_status.getProperty('selected_slave')
-                                result = INTERRUPTED if selected_slave and selected_slave == self.slavename else RETRY
-                                message = 'Slave %s reconfigured, it has been removed from this builder.' % self.slavename
-
-                                yield bldc.stopBuild(reason=message, result=result)
-
+                if buildername in removedBuilderList:
+                    selected_slave = build_status.getProperty('selected_slave')
+                    result = INTERRUPTED if selected_slave and selected_slave == self.slavename else RETRY
+                    reason = 'Slave %s reconfigured, it has been removed from this builder.' % self.slavename
+                    yield stopBuild(
+                        master=self.master,
+                        build_status=build_status,
+                        reason=reason,
+                        result=result
+                    )
 
     def updateSlave(self):
         """Called to add or remove builders after the slave has connected.
