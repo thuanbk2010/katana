@@ -288,7 +288,7 @@ class Builder(config.ReconfigurableServiceMixin,
                                            slave.slavename])
         # TODO: add an HTMLLogFile of the exception
 
-    def detached(self, slave, buildername=None):
+    def detached(self, slave):
         """This is called when the connection to the bot is lost."""
         for sb in self.attaching_slaves + self.getAllSlaves():
             if sb.slave == slave:
