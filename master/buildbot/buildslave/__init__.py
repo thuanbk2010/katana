@@ -355,20 +355,6 @@ class AbstractBuildSlave(config.ReconfigurableServiceMixin, pb.Avatar,
         if current_builders == previous_builers:
             return
 
-        @defer.inlineCallbacks
-        def stopBuild(master, build_status, result, reason):
-            c = interfaces.IControl(master)
-            buildername = build_status.getBuilder().getName()
-            bldrc = c.getBuilder(buildername)
-            if bldrc:
-                bldc = bldrc.getBuild(build_status.getNumber())
-                if bldc:
-                    yield bldc.stopBuild(reason=reason, result=result)
-                    log.msg("bldc.stopBuild")
-                    self.master.botmaster.maybeStartBuildsForBuilder(buildername)
-
-            defer.succeed(None)
-
         removedBuilderList = set(previous_builers) - set(current_builders)
 
         if removedBuilderList and self.slave_status.runningBuilds:
@@ -378,12 +364,7 @@ class AbstractBuildSlave(config.ReconfigurableServiceMixin, pb.Avatar,
                     selected_slave = build_status.getProperty('selected_slave')
                     result = INTERRUPTED if selected_slave and selected_slave == self.slavename else RETRY
                     reason = 'Slave %s reconfigured, it has been removed from this builder.' % self.slavename
-                    yield stopBuild(
-                        master=self.master,
-                        build_status=build_status,
-                        reason=reason,
-                        result=result
-                    )
+                    yield build_status.stopBuild(reason=reason, result=result)
 
     def updateSlave(self):
         """Called to add or remove builders after the slave has connected.
