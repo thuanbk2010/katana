@@ -154,6 +154,9 @@ class FakeMaster(object):
     def getProject(self, name):
         pass
 
+    def changeServicesStateRunning(self):
+        pass
+
 
 # Leave this alias, in case we want to add more behavior later
 def make_master(wantDb=False, testcase=None, **kwargs):
