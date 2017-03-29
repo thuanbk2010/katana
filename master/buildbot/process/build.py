@@ -572,6 +572,8 @@ class Build(properties.PropertiesMixin):
         # TODO: include 'reason' in this point event
         self.builder.builder_status.addPointEvent(['interrupt'])
         self.stopped = True
+        interruptDeferred = defer.Deferred()
+
         if self.currentStep:
             interruptDeferred = self.currentStep.interrupt(reason)
 
