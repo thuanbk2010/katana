@@ -314,8 +314,6 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
 
     @defer.inlineCallbacks
     def reconfigService(self, new_config):
-        yield self.changeServicesStateStarted()
-
         # check configured db
         if self.configured_db_url is None:
             self.configured_db_url = new_config.db['db_url']
@@ -337,6 +335,7 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
 
         # reconfigure all the services
         try:
+            yield self.changeServicesStateStarted()
             yield config.ReconfigurableServiceMixin.reconfigService(self, new_config)
         except Exception:
             log.msg(Failure(), "WARNING: master may malfunction, correct the issues")
