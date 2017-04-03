@@ -682,7 +682,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
     @defer.inlineCallbacks
     def test_maybeStartOrResumeBuildsOnMasterIsReconfiguringServices(self):
         yield self.generateBuildsWithDifferentPriorities()
-        self.master.changeServicesStateRunning.return_value = True
+        self.master.is_changing_services = True
         yield self.brd._maybeStartOrResumeBuildsOn(['bldr1'])
         self.assertEquals(self.processedBuilds, [])
 

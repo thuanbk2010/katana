@@ -22,6 +22,7 @@ from zope.interface import implements
 from twisted.python import log, components, failure
 from twisted.internet import defer, reactor, task
 from twisted.application import service
+from twisted.python.failure import Failure
 
 import buildbot
 import buildbot.pbmanager
@@ -93,7 +94,7 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
         self.reconfig_active = False
         self.reconfig_requested = False
         self.reconfig_notifier = None
-        self.change_services_state = False
+        self.is_changing_services = False
         self.change_service_lock = defer.DeferredLock()
 
         # this stores parameters used in the tac file, and is accessed by the
@@ -233,12 +234,14 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
             self.db_loop.stop()
             self.db_loop = None
 
-        yield self.changeServicesStateStarted()
-
         if self.running:
-            yield service.MultiService.stopService(self)
-
-        self.changeServicesStateFinished()
+            yield self.changeServicesStateStarted()
+            try:
+                yield service.MultiService.stopService(self)
+            except Exception:
+                log.msg(Failure(), "WARNING: Failed to stop the master and may malfunction, correct the issues")
+            finally:
+                self.changeServicesStateFinished()
 
     def reconfig(self):
         # this method wraps doConfig, ensuring it is only ever called once at
@@ -333,9 +336,14 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
             self.db_loop = None
 
         # reconfigure all the services
-        yield config.ReconfigurableServiceMixin.reconfigService(self, new_config)
+        try:
+            yield config.ReconfigurableServiceMixin.reconfigService(self, new_config)
+        except Exception:
+            log.msg(Failure(), "WARNING: master may malfunction, correct the issues")
+        finally:
+            self.changeServicesStateFinished()
+
         # try to start the builds after all the services are configured
-        self.changeServicesStateFinished()
         self.botmaster.maybeStartBuildsForAllBuilders()
 
         # adjust the db poller
@@ -348,17 +356,20 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
             self.db_loop.start(self.configured_poll_interval, now=False)
 
     def changeServicesStateFinished(self):
-        self.change_services_state = False
+        """
+        Allows the master to process new jobs after all the services are configured
+        """
+        self.is_changing_services = False
         self.change_service_lock.release()
 
     @defer.inlineCallbacks
     def changeServicesStateStarted(self):
+        """
+        Prevents the master from processing new jobs while the services are getting configured or are stopping
+        """
         if not self.change_service_lock.waiting:
             yield self.change_service_lock.acquire()
-            self.change_services_state = True
-
-    def changeServicesStateRunning(self):
-        return self.change_services_state
+            self.is_changing_services = True
 
     ## informational methods
 

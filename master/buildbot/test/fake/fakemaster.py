@@ -126,6 +126,7 @@ class FakeMaster(object):
         self.status = FakeStatus()
         self.status.master = self
         self.locks = {}
+        self.is_changing_services = None
 
     def getStatus(self):
         return self.status
@@ -152,9 +153,6 @@ class FakeMaster(object):
         return self.locks[lockid]
 
     def getProject(self, name):
-        pass
-
-    def changeServicesStateRunning(self):
         pass
 
 
