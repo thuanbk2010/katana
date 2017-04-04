@@ -30,6 +30,7 @@ class KatanaBuildRequestDistributorTestSetup(connector_component.ConnectorCompon
         self.botmaster = mock.Mock(name='botmaster')
         self.botmaster.builders = {}
         self.master = self.botmaster.master = mock.Mock(name='master')
+        self.master.is_changing_services = False
         self.master.db = self.db
         self.master.caches = cache.CacheManager()
         self.master.config.mergeRequests = None

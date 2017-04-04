@@ -126,6 +126,7 @@ class FakeMaster(object):
         self.status = FakeStatus()
         self.status.master = self
         self.locks = {}
+        self.is_changing_services = None
 
     def getStatus(self):
         return self.status

@@ -405,6 +405,81 @@ class StartupAndReconfig(dirs.DirsMixin, logging.LoggingMixin, unittest.TestCase
         yield self.master.stopService()
         self.assertEquals(self.calledMethods, ['db_loop_stop'])
 
+    def checkChangingServicesState(self, is_changing_services, change_service_lock):
+        self.assertEqual(self.master.is_changing_services, is_changing_services)
+        self.assertEqual(self.master.change_service_lock.locked, change_service_lock.locked)
+        self.assertEqual(self.master.change_service_lock.waiting, change_service_lock.waiting)
+
+    @defer.inlineCallbacks
+    def changeServiceStateTest(self, func, *args):
+        self.expected_change_service_lock = mock.Mock(locked=False, waiting=[])
+        self.checkChangingServicesState(is_changing_services=False, change_service_lock=self.expected_change_service_lock)
+
+        yield func(*args)
+
+        self.expected_change_service_lock.locked = False
+        self.checkChangingServicesState(is_changing_services=False, change_service_lock=self.expected_change_service_lock)
+
+    @defer.inlineCallbacks
+    def test_reconfigService_changesServicesState(self):
+        new_config = self.master.config = config.MasterConfig()
+
+        def reconfigService(_, new_config):
+            self.expected_change_service_lock.locked = True
+            self.checkChangingServicesState(is_changing_services=True, change_service_lock=self.expected_change_service_lock)
+            return defer.succeed(None)
+
+        self.patch(config.ReconfigurableServiceMixin, "reconfigService", reconfigService)
+
+        func = self.master.reconfigService
+
+        yield self.changeServiceStateTest(func, new_config)
+
+    @defer.inlineCallbacks
+    def test_reconfigServiceRaisesException(self):
+        new_config = self.master.config = config.MasterConfig()
+
+        def reconfigService(_, new_config):
+            self.expected_change_service_lock.locked = True
+            self.checkChangingServicesState(is_changing_services=True, change_service_lock=self.expected_change_service_lock)
+            raise Exception("bug")
+
+        self.patch(config.ReconfigurableServiceMixin, "reconfigService", reconfigService)
+
+        func = self.master.reconfigService
+
+        yield self.changeServiceStateTest(func, new_config)
+
+    @defer.inlineCallbacks
+    def test_stopService_changesServicesState(self):
+        self.master.running = True
+
+        def stopService(_):
+            self.expected_change_service_lock.locked = True
+            self.checkChangingServicesState(is_changing_services=True, change_service_lock=self.expected_change_service_lock)
+            return defer.succeed(True)
+
+        self.patch(service.MultiService, "stopService", stopService)
+
+        func = self.master.stopService
+
+        yield self.changeServiceStateTest(func)
+
+    @defer.inlineCallbacks
+    def test_stopServiceRaisesException(self):
+        self.master.running = True
+
+        def stopService(_):
+            self.expected_change_service_lock.locked = True
+            self.checkChangingServicesState(is_changing_services=True, change_service_lock=self.expected_change_service_lock)
+            raise Exception("bug")
+
+        self.patch(service.MultiService, "stopService", stopService)
+
+        func = self.master.stopService
+
+        yield self.changeServiceStateTest(func)
+
 
 class Polling(dirs.DirsMixin, misc.PatcherMixin, unittest.TestCase):
 
