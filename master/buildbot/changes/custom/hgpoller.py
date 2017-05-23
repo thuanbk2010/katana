@@ -41,7 +41,8 @@ class HgPoller(base.PollingChangeSource, StateMixin):
                  workdir=None, pollInterval=10*60,
                  hgbin='hg', usetimestamps=True,
                  category=None, project='',
-                 encoding='utf-8', commits_checked=10000):
+                 encoding='utf-8', commits_checked=10000,
+                 codebase=''):
 
         self.repourl = repourl
         self.branches = branches
@@ -57,6 +58,7 @@ class HgPoller(base.PollingChangeSource, StateMixin):
         self.usetimestamps = usetimestamps
         self.category = category
         self.project = project
+        self.codebase = codebase
         self.commitInfo  = {}
         self.initLock = defer.DeferredLock()
         self.commits_checked = commits_checked
@@ -279,6 +281,7 @@ class HgPoller(base.PollingChangeSource, StateMixin):
                 category=self.category,
                 project=self.project,
                 repository=self.repourl,
+                codebase=self.codebase,
                 src='hg')
 
     def _getHead(self, branch):
