@@ -128,6 +128,25 @@ class ChangesConnectorComponent(base.DBConnectorComponent):
         d = self.db.pool.do(thd)
         return d
 
+    def getChangesGreaterThan(self, changeid):
+        assert changeid >= 0
+        def thd(conn):
+            # get rows from the 'changes' table
+            changes_tbl = self.db.model.changes
+            q = changes_tbl.select(
+                whereclause=(changes_tbl.c.changeid > changeid),
+                order_by=[sa.asc(changes_tbl.c.changeid)],
+            )
+            rp = conn.execute(q)
+            rows = rp.fetchall()
+            changes = [
+                self._chdict_from_change_row_thd(conn, row)
+                for row in rows
+            ]
+            return changes
+        d = self.db.pool.do(thd)
+        return d
+
     def getChangeUids(self, changeid):
         assert changeid >= 0
         def thd(conn):
