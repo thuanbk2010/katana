@@ -754,20 +754,13 @@ class BuildMaster(config.ReconfigurableServiceMixin, service.MultiService):
             timer.stop()
             return
 
-        while True:
-            changeid = self._last_processed_change + 1
-            chdict = yield self.db.changes.getChange(changeid)
+        chdicts = yield self.db.changes.getChangesGreaterThan(self._last_processed_change)
+        if chdicts:
+            for chdict in chdicts:
+                change = yield changes.Change.fromChdict(self, chdict)
+                self._change_subs.deliver(change)
 
-            # if there's no such change, we've reached the end and can
-            # stop polling
-            if not chdict:
-                break
-
-            change = yield changes.Change.fromChdict(self, chdict)
-
-            self._change_subs.deliver(change)
-
-            self._last_processed_change = changeid
+            self._last_processed_change = chdicts[-1]['changeid']
             need_setState = True
 
         # write back the updated state, if it's changed

@@ -40,7 +40,7 @@ class TestCustomPoller(unittest.TestCase):
         self.changes_added = []
 
         def addChange(files=None, comments=None, author=None, revision=None,
-                      when_timestamp=None, branch=None, repository='', codebase=None,
+                      when_timestamp=None, branch=None, repository='', codebase='',
                       category='', project='', src=None):
             self.changes_added.append(Change(revision=revision, files=files,
                                  who=author, branch=branch, comments=comments,
@@ -54,19 +54,19 @@ class TestCustomPoller(unittest.TestCase):
         return [Change(revision=u'5553a6194a6393dfbec82f96654d52a76ddf844d', files=None,
                        who=u'dev3 <dev3@mail.com>', branch=u'1.0/dev', comments=u'list of changes3',
                        when=1421583649, category=None, project='',
-                       repository=repository, codebase=None),
+                       repository=repository, codebase=''),
                 Change(revision=u'b2e48cbab3f0753f99db833acff6ca18096854bd', files=None,
                        who=u'dev2 <dev2@mail.com>', branch=u'1.0/dev', comments=u'list of changes2',
                        when=1421667112, category=None, project='',
-                       repository=repository, codebase=None),
+                       repository=repository, codebase=''),
                 Change(revision=u'117b9a27b5bf65d7e7b5edb48f7fd59dc4170486', files=None,
                        who=u'dev1 <dev1@mail.com>', branch=u'1.0/dev', comments=u'list of changes1',
-                       when=1421667230, repository=repository, codebase=None),
+                       when=1421667230, repository=repository, codebase=''),
                 Change(revision=u'70fc4de2ff3828a587d80f7528c1b5314c51550e7', files=None,
                        who=u'dev4 <dev4@mail.com>', branch=u'trunkbookmark' if bookmark else u'trunk',
                        comments=u'list of changes4', when=1422983233,
                        category=None, project='', repository=repository,
-                       codebase=None)
+                       codebase='')
                 ]
 
     def getExpectedChangesHg(self, repository, bookmark=True):
@@ -75,7 +75,7 @@ class TestCustomPoller(unittest.TestCase):
                 Change(revision=u'68475k937dj69dk20567845jh9456726153hv47g7', files=None,
                        who=u'dev5 <dev5@mail.com>', branch=u'1.0/devOld', comments=u'list of changes5',
                        when=1421667231, category=None, project='',
-                       repository=repository, codebase=None),
+                       repository=repository, codebase=''),
                 ]
 
     def add_backwards_compatibility_with_db_commands(self):

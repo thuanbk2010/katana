@@ -37,7 +37,7 @@ class GitPoller(base.PollingChangeSource, StateMixin):
                  gitbin='git', usetimestamps=True,
                  category=None, project=None,
                  pollinterval=-2, fetch_refspec=None,
-                 encoding='utf-8'):
+                 encoding='utf-8', codebase=''):
 
         # for backward compatibility; the parameter used to be spelled with 'i'
         if pollinterval != -2:
@@ -57,6 +57,7 @@ class GitPoller(base.PollingChangeSource, StateMixin):
         self.usetimestamps = usetimestamps
         self.category = category
         self.project = project
+        self.codebase = codebase
         self.changeCount = 0
         self.lastRev = {}
 
@@ -304,6 +305,7 @@ class GitPoller(base.PollingChangeSource, StateMixin):
                 category=self.category,
                 project=self.project,
                 repository=self.repourl,
+                codebase=self.codebase,
                 src='git')
 
         self.lastRev[branchname] = newRev

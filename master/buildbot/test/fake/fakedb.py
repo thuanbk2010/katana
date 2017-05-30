@@ -404,13 +404,8 @@ class FakeChangesComponent(FakeDBComponent):
             return defer.succeed(max(self.changes.iterkeys()))
         return defer.succeed(None)
 
-    def getChange(self, changeid):
-        try:
-            row = self.changes[changeid]
-        except KeyError:
-            return defer.succeed(None)
-
-        chdict = dict(
+    def _rowToChdict(self, row):
+        return dict(
                 changeid=row.changeid,
                 author=row.author,
                 files=row.files,
@@ -426,7 +421,20 @@ class FakeChangesComponent(FakeDBComponent):
                 codebase=row.codebase,
                 project=row.project)
 
-        return defer.succeed(chdict)
+    def getChange(self, changeid):
+        try:
+            row = self.changes[changeid]
+        except KeyError:
+            return defer.succeed(None)
+
+        return defer.succeed(self._rowToChdict(row))
+
+    def getChangesGreaterThan(self, changeid):
+        return defer.succeed([
+            self._rowToChdict(row)
+            for cid, row in sorted(self.changes.iteritems())
+            if cid > changeid
+        ])
 
     def getChangeUids(self, changeid):
         try:
