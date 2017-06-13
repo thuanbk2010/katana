@@ -256,5 +256,5 @@ class TestKatanaBuildRequestDistributorUnderLoad(unittest.TestCase,
         yield self.profileAsyncFunc(18, self.brd._maybeStartOrResumeBuildsOn,
                                     new_builders=self.botmaster.builders.keys())
         self.assertEquals(len(self.processedBuilds), 199)
-        self.assertEquals(len(self.mergedBuilds), 388)
+        self.assertEquals(len(self.mergedBuilds), 398)
 

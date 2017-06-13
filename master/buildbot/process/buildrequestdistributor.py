@@ -410,6 +410,7 @@ class KatanaBuildChooser(BasicBuildChooser):
         # reset the checkMerges in case the breq still in the master cache
         breq.checkMerges = True
         breq.retries = 0
+        breq.hasBeenMerged = False
         if self.unclaimedBrdicts and breq.brdict and breq.brdict in self.unclaimedBrdicts:
             self.unclaimedBrdicts.remove(breq.brdict)
         if self.resumeBrdicts and breq.brdict and breq.brdict in self.resumeBrdicts:
@@ -499,7 +500,8 @@ class KatanaBuildChooser(BasicBuildChooser):
             breq = yield self._getBuildRequestForBrdict(br)
 
             self.setupNextBuildRequest(bldr, breq)
-            if breq.checkMerges and (yield self.mergeCompatibleBuildRequests(breq, queue)):
+
+            if breq.hasBeenMerged or (breq.checkMerges and (yield self.mergeCompatibleBuildRequests(breq, queue))):
                 continue
 
             def getSlavepool():
@@ -660,7 +662,6 @@ class KatanaBuildChooser(BasicBuildChooser):
     # notify the master that the buildrequests were removed from queue
     def notifyRequestsRemoved(self, buildrequests):
         for br in buildrequests:
-            self.removeBuildRequest(br)
             self.master.buildRequestRemoved(br.bsid, br.id, self.bldr.name)
 
     @defer.inlineCallbacks
@@ -670,7 +671,6 @@ class KatanaBuildChooser(BasicBuildChooser):
             yield self.master.maybeBuildsetComplete(br.bsid)
             # notify the master that the buildrequest was remove from queue
             self.master.buildRequestRemoved(br.bsid, br.id, self.bldr.name)
-            self.removeBuildRequest(br)
 
     @defer.inlineCallbacks
     def mergeBuildingRequests(self, brids, breqs, queue):
@@ -737,8 +737,12 @@ class KatanaBuildChooser(BasicBuildChooser):
         timer = timerLogStart("mergeCompatibleBuildRequests starting",
                               function_name="KatanaBuildChooser.mergeCompatibleBuildRequests")
 
-        def mergeCheckFinished():
-            breq.checkMerges = False
+        def mergeCheckFinished(breqs):
+            hasBeenMerged = len(breqs) > 1
+            for br in breqs:
+                br.checkMerges = False
+                br.hasBeenMerged = hasBeenMerged
+
             timerLogFinished(msg="mergeCompatibleBuildRequests finished", timer=timer)
 
         # 2. try merge this build with a compatible running build
@@ -753,7 +757,7 @@ class KatanaBuildChooser(BasicBuildChooser):
                     yield self.bldr.maybeUpdateMergedBuilds(brid=build.requests[0].id,
                                                             buildnumber=build.build_status.number,
                                                             brids=brids)
-                    mergeCheckFinished()
+                    mergeCheckFinished(totalBreqs)
                     defer.returnValue(True)
                     return
 
@@ -786,7 +790,7 @@ class KatanaBuildChooser(BasicBuildChooser):
                     yield self.bldr.maybeUpdateMergedBuilds(brid=finished_br['brid'],
                                                             buildnumber=buildnumber,
                                                             brids=totalBrids)
-                    mergeCheckFinished()
+                    mergeCheckFinished(totalBreqs)
                     defer.returnValue(True)
                     return
 
@@ -795,7 +799,7 @@ class KatanaBuildChooser(BasicBuildChooser):
                     log.msg("mergeFinishedBuildRequest skipped: merge finished buildresquest %s with %s failed"
                             % (finished_br, totalBrids))
 
-        mergeCheckFinished()
+        mergeCheckFinished([breq])
         defer.returnValue(False)
 
     def logSlaveSelectionStatus(self, breq, selected_slave, usable_slave):
