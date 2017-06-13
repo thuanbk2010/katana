@@ -84,6 +84,7 @@ class BuildRequest(object):
     submittedAt = None
     brdict = None
     checkMerges = True
+    hasBeenMerged = False
     retries = 0
 
     @classmethod
