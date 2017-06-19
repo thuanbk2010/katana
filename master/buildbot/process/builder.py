@@ -575,6 +575,12 @@ class Builder(config.ReconfigurableServiceMixin,
 
         return d
 
+    @defer.inlineCallbacks
+    def finishBuildRequestsFailed(self, failure, msg, brids):
+        log.err(failure, msg)
+        log.msg("Katana will retry buildrequests with ids %s" % brids)
+        yield self.master.db.buildrequests.unclaimBuildRequests(brids, results=BEGINNING)
+
     def finishBuildRequests(self, brids, requests, build, bids=None, mergedbrids=None):
 
         d = self.master.db.builds.finishBuilds(bids) if bids else defer.succeed(None)
@@ -603,7 +609,7 @@ class Builder(config.ReconfigurableServiceMixin,
             d.addCallback(lambda _: self._maybeBuildsetsComplete(requests, results=results))
             # nothing in particular to do with this deferred, so just log it if
             # it fails..
-            d.addErrback(log.err, 'while marking build requests as completed')
+            d.addErrback(self.finishBuildRequestsFailed, 'while marking build requests as completed', brids)
         return d
 
 
