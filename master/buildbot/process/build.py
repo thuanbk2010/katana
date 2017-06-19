@@ -630,7 +630,7 @@ class Build(properties.PropertiesMixin):
             self.remote = None
         self.results = results
 
-        log.msg(" %s: build finished" % self)
+        log.msg(" %s: build finished #%s results %s" % (self, self.build_status.number, self.results))
         self.build_status.setText(text)
         self.build_status.setResults(results)
         self.build_status.buildFinished()
