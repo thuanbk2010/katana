@@ -430,7 +430,7 @@ class Builder(config.ReconfigurableServiceMixin,
         log.msg("starting build %s.. pinging the slave %s"
                 % (build, slavebuilder))
         try:
-            ping_success = yield slavebuilder.ping()
+            ping_success = yield slavebuilder.ping(timeout=self.master.config.remoteCallTimeout)
         except:
             log.err(failure.Failure(), 'while pinging slave before build:')
             ping_success = False

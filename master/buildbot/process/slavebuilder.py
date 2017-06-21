@@ -129,7 +129,7 @@ class AbstractSlaveBuilder(pb.Referenceable):
             return defer.succeed(False)
         return defer.succeed(True)
 
-    def ping(self, status=None):
+    def ping(self, status=None, timeout=5):
         """Ping the slave to make sure it is still there. Returns a Deferred
         that fires with True if it is.
 
@@ -149,7 +149,7 @@ class AbstractSlaveBuilder(pb.Referenceable):
                 self.ping_watchers.insert(0, d2)
                 # I think it will make the tests run smoother if the status
                 # is updated before the ping completes
-            Ping().ping(self.remote, self.slave.slavename).addCallback(self._pong)
+            Ping().ping(self.remote, self.slave.slavename, timeout=timeout).addCallback(self._pong)
 
         def reset_state(res):
             if self.state == PINGING:
@@ -193,7 +193,7 @@ class Ping:
         log.msg("ping slave %s timeout after %s secs" % (slavename, timeout))
         rd.cancel()
 
-    def ping(self, remote, slavename):
+    def ping(self, remote, slavename, timeout=5):
         assert not self.running
         if not remote:
             # clearly the ping must fail
@@ -205,7 +205,6 @@ class Ping:
         # TODO: add a distinct 'ping' command on the slave.. using 'print'
         # for this purpose is kind of silly.
         try:
-            timeout = 5
             rd = remote.callRemote("print", "ping")
             reactor.callLater(timeout, self.cancelPing, timeout, rd, slavename)
             rd.addCallbacks(self._pong, self._ping_failed, errbackArgs=(remote,))
