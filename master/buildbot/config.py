@@ -81,7 +81,7 @@ class MasterConfig(object):
         self.codebaseGenerator = None
         self.prioritizeBuilders = None
         self.slavePortnum = None
-        self.remoteCallTimeout = 5
+        self.remoteCallTimeout = 5 # timeout in seconds
         self.multiMaster = False
         self.debugPassword = None
         self.manhole = None
