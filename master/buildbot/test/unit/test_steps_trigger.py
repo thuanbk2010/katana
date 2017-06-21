@@ -573,7 +573,7 @@ class TestTrigger(steps.BuildStepMixin, unittest.TestCase):
         sb.slave.updateStatusBuildFinished = lambda result, build: result
         sb.slave.properties = properties.Properties()
         sb.prepare = lambda x, y: True
-        sb.ping = lambda: True
+        sb.ping = lambda timeout: True
         sb.buildStarted = lambda: True
         sb.buildFinished = lambda _: False
         sb.setSlaveIdle = lambda: False
