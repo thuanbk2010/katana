@@ -7,6 +7,10 @@ from buildbot.util import safeTranslate
 from buildbot.process.slavebuilder import IDLE, BUILDING
 from buildbot.steps.resumebuild import ResumeBuild, ShellCommandResumeBuild
 
+# Change artifact location in August
+# datetime.datetime(2017, 7, 31, 23, 59, 59, tzinfo=UTC)
+ARTIFACT_LOCATION_CHANGE_DATE = epoch2datetime(1501545599)
+
 def FormatDatetime(value):
     return value.strftime("%d_%m_%Y_%H_%M_%S_%z")
 
@@ -183,9 +187,15 @@ class CheckArtifactExists(ShellCommandResumeBuild):
 
         if self.artifactBuildrequest:
             self.step_status.setText(["Artifact has been already generated."])
-            self.artifactPath = "%s_%s_%s" % (self.build.builder.config.builddir,
-                                              self.artifactBuildrequest['brid'],
-                                              FormatDatetime(self.artifactBuildrequest['submitted_at']))
+
+            if self.artifactBuildrequest["submitted_at"] > ARTIFACT_LOCATION_CHANGE_DATE:
+                self.artifactPath = "%s/%s_%s" % (self.build.builder.config.builddir,
+                                                  self.artifactBuildrequest['brid'],
+                                                  FormatDatetime(self.artifactBuildrequest['submitted_at']))
+            else:
+                self.artifactPath = "%s_%s_%s" % (self.build.builder.config.builddir,
+                                                  self.artifactBuildrequest['brid'],
+                                                  FormatDatetime(self.artifactBuildrequest['submitted_at']))
 
             if self.artifactDirectory:
                 self.artifactPath += "/%s" %  self.artifactDirectory
@@ -233,8 +243,13 @@ class CreateArtifactDirectory(ShellCommand):
 
     def start(self):
         br = self.build.requests[0]
-        artifactPath  = "%s_%s_%s" % (self.build.builder.config.builddir,
-                                      br.id, FormatDatetime(mkdt(br.submittedAt)))
+        if mkdt(br.submittedAt) > ARTIFACT_LOCATION_CHANGE_DATE:
+            artifactPath  = "%s/%s_%s" % (self.build.builder.config.builddir,
+                                          br.id, FormatDatetime(mkdt(br.submittedAt)))
+        else:
+            artifactPath  = "%s_%s_%s" % (self.build.builder.config.builddir,
+                                          br.id, FormatDatetime(mkdt(br.submittedAt)))
+
         if (self.artifactDirectory):
             artifactPath += "/%s" % self.artifactDirectory
 
@@ -313,7 +328,10 @@ class UploadArtifact(ShellCommand):
             master = self.build.builder.botmaster.parent
             reuse = yield master.db.buildrequests.updateMergedBuildRequest(self.build.requests)
 
-        artifactPath  = "%s_%s_%s" % (self.build.builder.config.builddir, br.id, FormatDatetime(mkdt(br.submittedAt)))
+        if mkdt(br.submittedAt) > ARTIFACT_LOCATION_CHANGE_DATE:
+            artifactPath  = "%s/%s_%s" % (self.build.builder.config.builddir, br.id, FormatDatetime(mkdt(br.submittedAt)))
+        else:
+            artifactPath = "%s_%s_%s" % (self.build.builder.config.builddir, br.id, FormatDatetime(mkdt(br.submittedAt)))
 
         artifactServerPath = self.build.getProperty("artifactServerPath", None)
         if artifactServerPath is None:
@@ -367,8 +385,13 @@ class DownloadArtifact(ShellCommand):
         triggeredbybrid = self.build.requests[0].id
         br = yield self.master.db.buildrequests.getBuildRequestTriggered(triggeredbybrid, self.artifactBuilderName)
 
-        artifactPath  = "%s_%s_%s" % (safeTranslate(self.artifactBuilderName),
-                                      br['brid'], FormatDatetime(br["submitted_at"]))
+        if br["submitted_at"] > ARTIFACT_LOCATION_CHANGE_DATE:
+            artifactPath  = "%s/%s_%s" % (safeTranslate(self.artifactBuilderName),
+                                          br['brid'], FormatDatetime(br["submitted_at"]))
+        else:
+            artifactPath  = "%s_%s_%s" % (safeTranslate(self.artifactBuilderName),
+                                          br['brid'], FormatDatetime(br["submitted_at"]))
+
         if (self.artifactDirectory):
             artifactPath += "/%s" % self.artifactDirectory
 
