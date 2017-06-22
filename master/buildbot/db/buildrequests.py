@@ -1043,34 +1043,28 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
             # parameter lists supported by the DBAPI aren't exhausted
             iterator = iter(brids)
 
-            try:
-                while 1:
-                    batch = list(itertools.islice(iterator, 100))
-                    if not batch:
-                        break  # success!
+            while 1:
+                batch = list(itertools.islice(iterator, 100))
+                if not batch:
+                    break  # success!
 
-                    q = buildrequests_tbl.update() \
-                        .where(buildrequests_tbl.c.id.in_(batch))
+                q = buildrequests_tbl.update() \
+                    .where(buildrequests_tbl.c.id.in_(batch))
 
-                    if results:
-                        q = q.values(results=results)
+                if results:
+                    q = q.values(results=results)
 
-                    if slavepool:
-                        q = q.values(slavepool=slavepool)
+                if slavepool:
+                    q = q.values(slavepool=slavepool)
 
-                    res = conn.execute(q)
+                res = conn.execute(q)
 
-                    # if an incorrect number of rows were updated, then we failed.
-                    if res.rowcount != len(batch):
-                        log.msg("tried to update %d buildrequests, "
-                                "but only updated %d" % (len(batch), res.rowcount))
-                        raise UpdateBuildRequestError
-            except:
-                log.msg(Failure())
-                log.msg("updateBuildRequests query failed: %s" % self.getSQLExpression(q))
-                transaction.rollback()
-                raise
-
+                # if an incorrect number of rows were updated, then we failed.
+                if res.rowcount != len(batch):
+                    log.msg("tried to update %d buildreqests, "
+                            "but only updated %d" % (len(batch), res.rowcount))
+                    transaction.rollback()
+                    raise UpdateBuildRequestError
             transaction.commit()
 
         return self.db.pool.do(thd)
@@ -1097,31 +1091,25 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
             # parameter lists supported by the DBAPI aren't exhausted
             iterator = iter(brids)
 
-            try:
+            while 1:
+                batch = list(itertools.islice(iterator, 100))
+                if not batch:
+                    break  # success!
 
-                while 1:
-                    batch = list(itertools.islice(iterator, 100))
-                    if not batch:
-                        break  # success!
+                q = reqs_tbl.update()
+                q = q.where(reqs_tbl.c.id.in_(batch))
+                q = q.where(reqs_tbl.c.complete != 1)
+                res = conn.execute(q,
+                                   complete=1,
+                                   results=results,
+                                   complete_at=complete_at)
 
-                    q = reqs_tbl.update()
-                    q = q.where(reqs_tbl.c.id.in_(batch))
-                    q = q.where(reqs_tbl.c.complete != 1)
-                    res = conn.execute(q,
-                                       complete=1,
-                                       results=results,
-                                       complete_at=complete_at)
-
-                    # if an incorrect number of rows were updated, then we failed.
-                    if res.rowcount != len(batch):
-                        log.msg("tried to complete %d requests, "
-                                "but only completed %d" % (len(batch), res.rowcount))
-                        raise NotClaimedError
-            except:
-                log.msg("completeBuildRequests query failed: %s" % self.getSQLExpression(q))
-                transaction.rollback()
-                raise
-
+                # if an incorrect number of rows were updated, then we failed.
+                if res.rowcount != len(batch):
+                    log.msg("tried to complete %d buildreqests, "
+                            "but only completed %d" % (len(batch), res.rowcount))
+                    transaction.rollback()
+                    raise NotClaimedError
             transaction.commit()
 
         return self.db.pool.do(thd)

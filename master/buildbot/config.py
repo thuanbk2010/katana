@@ -81,7 +81,6 @@ class MasterConfig(object):
         self.codebaseGenerator = None
         self.prioritizeBuilders = None
         self.slavePortnum = None
-        self.remoteCallTimeout = 5
         self.multiMaster = False
         self.debugPassword = None
         self.manhole = None
@@ -131,7 +130,7 @@ class MasterConfig(object):
         "status", "title", "titleURL", "user_managers", "validation", "realTimeServer",
         "analytics_code", "gzip", "autobahn_push", "lastBuildCacheDays",
         "requireLogin", "globalFactory", "slave_debug_url", "slaveManagerUrl",
-        "cleanUpPeriod", "buildRequestsDays", "remoteCallTimeout"
+        "cleanUpPeriod", "buildRequestsDays"
     ])
 
     @classmethod
@@ -326,8 +325,6 @@ class MasterConfig(object):
             if isinstance(slavePortnum, int):
                 slavePortnum = "tcp:%d" % slavePortnum
             self.slavePortnum = slavePortnum
-
-        copy_int_param('remoteCallTimeout')
 
         if 'multiMaster' in config_dict:
             self.multiMaster = config_dict["multiMaster"]
