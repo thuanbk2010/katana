@@ -189,8 +189,8 @@ class Ping:
             msg += " %s" % self.slavename
         return msg
 
-    def pingTimeout(self):
-        log.msg("ping has timeout")
+    def pingTimeout(self, value, timeout):
+        log.msg("ping %s timeout after %s secs" % (self.slavename, timeout))
 
     def ping(self, remote, slavename, timeout=5):
         assert not self.running
