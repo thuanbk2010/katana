@@ -129,7 +129,7 @@ class AbstractSlaveBuilder(pb.Referenceable):
             return defer.succeed(False)
         return defer.succeed(True)
 
-    def ping(self, status=None):
+    def ping(self, status=None, timeout=5):
         """Ping the slave to make sure it is still there. Returns a Deferred
         that fires with True if it is.
 
@@ -149,7 +149,7 @@ class AbstractSlaveBuilder(pb.Referenceable):
                 self.ping_watchers.insert(0, d2)
                 # I think it will make the tests run smoother if the status
                 # is updated before the ping completes
-            Ping().ping(self.remote, self.slave.slavename).addCallback(self._pong)
+            Ping().ping(self.remote, self.slave.slavename, timeout=timeout).addCallback(self._pong)
 
         def reset_state(res):
             if self.state == PINGING:
@@ -189,16 +189,10 @@ class Ping:
             msg += " %s" % self.slavename
         return msg
 
-    def sleep(self, res, secs):
-        log.msg("asking main thread to do something")
-        d = defer.Deferred()
-        reactor.callLater(secs, d.callback, None)
-        return d
-
     def pingTimeout(self):
         log.msg("ping has timeout")
 
-    def ping(self, remote, slavename):
+    def ping(self, remote, slavename, timeout=5):
         assert not self.running
         if not remote:
             # clearly the ping must fail
@@ -207,13 +201,11 @@ class Ping:
         self.slavename = slavename
         log.msg(self.includeSlavename("sending ping"))
         self.d = defer.Deferred()
-        #self.d.addCallback(self.sleep, 6)
         # TODO: add a distinct 'ping' command on the slave.. using 'print'
         # for this purpose is kind of silly.
         try:
-            log.msg("about to call remote.callRemote")
             rd = remote.callRemote("print", "ping")
-            rd.addTimeout(5, reactor, onTimeoutCancel=self.pingTimeout)
+            rd.addTimeout(timeout, reactor, onTimeoutCancel=self.pingTimeout)
             rd.addCallbacks(self._pong, self._ping_failed, errbackArgs=(remote,))
 
 

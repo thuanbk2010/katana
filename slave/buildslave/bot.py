@@ -99,9 +99,6 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         self.remote.notifyOnDisconnect(self.lostRemote)
 
     def remote_print(self, message):
-        import time
-        sec = 0
-        time.sleep(sec)
         log.msg("SlaveBuilder.remote_print(%s): message from master: %s" %
                 (self.name, message))
 
