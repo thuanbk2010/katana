@@ -6,7 +6,7 @@
     {% if c.category %}
     <td>{{ c.category }}</td>
     {% endif %}
-    <td></td>
+    <td>{{ c.who|email }}</td>
     <td>{{ c.at }}</td>
 
     {% if c.repository %}
