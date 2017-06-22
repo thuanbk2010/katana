@@ -16,6 +16,7 @@
 from twisted.spread import pb
 from twisted.internet import defer
 from twisted.python import log
+from twisted.internet import reactor
 
 (ATTACHING, # slave attached, still checking hostinfo/etc
  IDLE, # idle, available for use
@@ -188,6 +189,15 @@ class Ping:
             msg += " %s" % self.slavename
         return msg
 
+    def sleep(self, res, secs):
+        log.msg("asking main thread to do something")
+        d = defer.Deferred()
+        reactor.callLater(secs, d.callback, None)
+        return d
+
+    def pingTimeout(self):
+        log.msg("ping has timeout")
+
     def ping(self, remote, slavename):
         assert not self.running
         if not remote:
@@ -197,12 +207,16 @@ class Ping:
         self.slavename = slavename
         log.msg(self.includeSlavename("sending ping"))
         self.d = defer.Deferred()
+        #self.d.addCallback(self.sleep, 6)
         # TODO: add a distinct 'ping' command on the slave.. using 'print'
         # for this purpose is kind of silly.
         try:
-            remote.callRemote("print", "ping").addCallbacks(self._pong,
-                                                            self._ping_failed,
-                                                            errbackArgs=(remote,))
+            log.msg("about to call remote.callRemote")
+            rd = remote.callRemote("print", "ping")
+            rd.addTimeout(5, reactor, onTimeoutCancel=self.pingTimeout)
+            rd.addCallbacks(self._pong, self._ping_failed, errbackArgs=(remote,))
+
+
         except Exception, ex:
             log.err("Exception raise '%s' while pinging slave %s" % (ex, self.slavename))
             remote.broker.transport.loseConnection()
