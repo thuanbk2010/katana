@@ -189,10 +189,6 @@ class Ping:
             msg += " %s" % self.slavename
         return msg
 
-    def pingTimeout(self, value, timeout):
-        log.msg("ping %s timeout after %s secs" % (self.slavename, timeout))
-        raise Exception("Ping has timeout")
-
     def ping(self, remote, slavename, timeout=5):
         assert not self.running
         if not remote:
@@ -206,7 +202,7 @@ class Ping:
         # for this purpose is kind of silly.
         try:
             rd = remote.callRemote("print", "ping")
-            rd.addTimeout(timeout, reactor, onTimeoutCancel=self.pingTimeout)
+            rd.addTimeout(timeout, reactor)
             rd.addCallbacks(self._pong, self._ping_failed, errbackArgs=(remote,))
 
 
