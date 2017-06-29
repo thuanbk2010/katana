@@ -433,13 +433,12 @@ class Builder(config.ReconfigurableServiceMixin,
             ping_success = yield slavebuilder.ping(timeout=self.master.config.remoteCallTimeout)
         except:
             log.err(failure.Failure(), 'while pinging slave before build:')
-            ping_success = False
+            raise
 
         if not ping_success:
             log.msg("build %s slave %s ping failed; re-queueing the request" % (build, slavebuilder))
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise Exception("Ping failed")
 
         #check slave is still available
         ready = slavebuilder.isAvailable()
@@ -448,7 +447,7 @@ class Builder(config.ReconfigurableServiceMixin,
                 ready = yield slavebuilder.prepare(self.builder_status, build)
             except:
                 log.err(failure.Failure(), 'while preparing slavebuilder:')
-                ready = False
+                raise
 
         # If prepare returns True then it is ready and we start a build
         # If it returns false then we don't start a new build.
@@ -456,8 +455,7 @@ class Builder(config.ReconfigurableServiceMixin,
             log.msg("slave %s can't build %s after all; re-queueing the "
                     "request" % (build, slavebuilder))
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise Exception("Unknown")
 
         # The buildslave is ready to go. slavebuilder.buildStarted() sets its
         # state to BUILDING (so we won't try to use it for any other builds).
@@ -468,8 +466,7 @@ class Builder(config.ReconfigurableServiceMixin,
             log.msg("slave %s can't build %s after all; re-queueing the "
                     "request" % (build, slavebuilder))
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise Exception("Unknown")
 
         # tell the remote that it's starting a build, too
         try:
@@ -477,8 +474,7 @@ class Builder(config.ReconfigurableServiceMixin,
         except:
             log.err(failure.Failure(), 'while calling remote startBuild:')
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise
 
         # create the BuildStatus object that goes with the Build
         if build_status is None:
@@ -506,8 +502,7 @@ class Builder(config.ReconfigurableServiceMixin,
         except:
             log.err(failure.Failure(), 'while adding rows to build table:')
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise
 
         # IMPORTANT: no yielding is allowed from here to the startBuild call!
 
@@ -518,8 +513,7 @@ class Builder(config.ReconfigurableServiceMixin,
         if not slavebuilder.remote:
             log.msg("slave disappeared before build could start")
             run_cleanups()
-            defer.returnValue(False)
-            return
+            raise Exception("Slave seems to have disappered")
 
         # let status know
         self.master.status.build_started(main_br.id, self.name, bs)
@@ -541,8 +535,6 @@ class Builder(config.ReconfigurableServiceMixin,
 
         # make sure the builder's status is represented correctly
         self.updateBigStatus()
-
-        defer.returnValue(True)
 
     def setupProperties(self, props):
         props.setProperty("buildername", self.name, "Builder")
