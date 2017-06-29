@@ -234,9 +234,6 @@ class TestSlaveBuilder(command.CommandTestMixin, unittest.TestCase):
         d.addCallback(check)
         return d
 
-    def test_startBuild(self):
-        return self.sb.callRemote("startBuild")
-
     def test_startCommand(self):
         # set up a fake step to receive updates
         st = FakeStep()
