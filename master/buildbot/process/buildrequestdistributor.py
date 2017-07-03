@@ -424,10 +424,6 @@ class KatanaBuildChooser(BasicBuildChooser):
         for breq in breqs:
             self.removeBuildRequest(breq)
 
-    def requeueBuildRequests(self, breqs):
-        for breq in breqs:
-            self.unclaimedBrdicts.add(breq.brdict)
-
     def retryBuildRequest(self):
         msg = "Katana failed to process buildrequest.id %s, Katana will retry again" % self.nextBreq.id
         self.nextBreq.retries += 1
@@ -1237,7 +1233,7 @@ class KatanaBuildRequestDistributor(service.Service):
         yield self.master.db.buildrequests.updateBuildRequests(brids, results=BEGINNING)
           
         buildDefered = self.katanaBuildChooser.bldr.maybeResumeBuild(slave, buildnumber, breqs)
-        buildDefered.addErrback(self._resume)
+        buildDefered.addErrback(self._resume, breqs, self.katanaBuildChooser.bldr.name)
 
         self.katanaBuildChooser.removeBuildRequests(breqs)
 
