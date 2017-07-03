@@ -527,6 +527,7 @@ class Builder(config.ReconfigurableServiceMixin,
 
         # make sure the builder's status is represented correctly
         self.updateBigStatus()
+        defer.returnValue(True)
 
     def setupProperties(self, props):
         props.setProperty("buildername", self.name, "Builder")
