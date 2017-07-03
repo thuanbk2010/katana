@@ -468,17 +468,6 @@ class Builder(config.ReconfigurableServiceMixin,
             run_cleanups()
             raise Exception("Unknown")
 
-<<<<<<< HEAD
-        # tell the remote that it's starting a build, too
-        try:
-            yield slavebuilder.remote.callRemote("startBuild")
-        except:
-            log.err(failure.Failure(), 'while calling remote startBuild:')
-            run_cleanups()
-            raise
-
-=======
->>>>>>> 7dd98b2a5cdf4828a0f2a6178c0bc441dc2a6c19
         # create the BuildStatus object that goes with the Build
         if build_status is None:
             bs = self.builder_status.newBuild()

@@ -1248,6 +1248,7 @@ class KatanaBuildRequestDistributor(service.Service):
     @defer.inlineCallbacks
     def _resume(self, e, breqs, builderName):
         brids = [br.id for br in breqs]
+        log.msg("Could not resume builds {}. Exception message: {}. Requeueing.".format(brids, e.value))
         yield self.master.db.buildrequests.updateBuildRequests(brids, results=RESUME)
         self.botmaster.maybeStartBuildsForBuilder(builderName)
 
@@ -1274,7 +1275,7 @@ class KatanaBuildRequestDistributor(service.Service):
     @defer.inlineCallbacks
     def _requeue(self, e, breqs, builderName):
         brids = [br.id for br in breqs]
-        log.msg("Could not start builds {} because {}. Requeueing.".format(brids, e.value))
+        log.msg("Could not start builds {}. Exception message: {}. Requeueing.".format(brids, e.value))
         yield self.master.db.buildrequests.unclaimBuildRequests(brids)
         self.botmaster.maybeStartBuildsForBuilder(builderName)
 
