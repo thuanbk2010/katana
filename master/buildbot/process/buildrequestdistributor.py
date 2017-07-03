@@ -424,6 +424,10 @@ class KatanaBuildChooser(BasicBuildChooser):
         for breq in breqs:
             self.removeBuildRequest(breq)
 
+    def requeueBuildRequests(self, breqs):
+        for breq in breqs:
+            self.unclaimedBrdicts.add(breq.brdict)
+
     def retryBuildRequest(self):
         msg = "Katana failed to process buildrequest.id %s, Katana will retry again" % self.nextBreq.id
         self.nextBreq.retries += 1
@@ -1231,20 +1235,21 @@ class KatanaBuildRequestDistributor(service.Service):
 
         brids = [br.id for br in breqs]
         yield self.master.db.buildrequests.updateBuildRequests(brids, results=BEGINNING)
-
-        def _resume(self, brids):
-            yield self.master.db.buildrequests.updateBuildRequests(brids, results=RESUME)
-            self.botmaster.maybeStartBuildsForBuilder(self.katanaBuildChooser.bldr.name)
-            # TODO: undo self.katanaBuildChooser.removeBuildRequests(breqs)
-
+          
         buildDefered = self.katanaBuildChooser.bldr.maybeResumeBuild(slave, buildnumber, breqs)
-        buildDefered.addErrback(_resume)
+        buildDefered.addErrback(self._resume)
 
         self.katanaBuildChooser.removeBuildRequests(breqs)
 
         msg = "_maybeResumeBuildOnBuilder is resuming build"
         self.logResumeOrStartBuildStatus(msg, slave, breqs)
         defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _resume(self, e, breqs, builderName):
+        brids = [br.id for br in breqs]
+        yield self.master.db.buildrequests.updateBuildRequests(brids, results=RESUME)
+        self.botmaster.maybeStartBuildsForBuilder(builderName)
 
     @defer.inlineCallbacks
     def _maybeStartBuildsOnBuilder(self):
@@ -1255,23 +1260,23 @@ class KatanaBuildRequestDistributor(service.Service):
             return
 
         # claim brid's
-        brids = [br.id for br in breqs]
         yield self.katanaBuildChooser.claimBuildRequests(breqs)
 
-        def _requeue(e):
-            log.msg("Could not start builds {} because {}. Requeueing.".format(brids, e.value))
-            yield self.master.db.buildrequests.unclaimBuildRequests(brids)
-            self.botmaster.maybeStartBuildsForBuilder(self.katanaBuildChooser.bldr.name)
-            # TODO: undo self.katanaBuildChooser.removeBuildRequests(breqs)
-
         buildDefered = self.katanaBuildChooser.bldr.maybeStartBuild(slave, breqs)
-        buildDefered.addErrback(_requeue)
+        buildDefered.addErrback(self._requeue, breqs, self.katanaBuildChooser.bldr.name)
 
         msg = "_maybeStartNewBuildsOnBuilder is starting build"
         self.katanaBuildChooser.removeBuildRequests(breqs)
 
         self.logResumeOrStartBuildStatus(msg, slave, breqs)
         defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _requeue(self, e, breqs, builderName):
+        brids = [br.id for br in breqs]
+        log.msg("Could not start builds {} because {}. Requeueing.".format(brids, e.value))
+        yield self.master.db.buildrequests.unclaimBuildRequests(brids)
+        self.botmaster.maybeStartBuildsForBuilder(builderName)
 
     def createBuildChooser(self, builders, master):
         # just instantiate the build chooser requested
