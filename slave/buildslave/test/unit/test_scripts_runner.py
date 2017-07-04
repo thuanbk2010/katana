@@ -186,8 +186,23 @@ class TestCreateSlaveOptions(OptionsMixin, unittest.TestCase):
                             "umask"          : "022",
                             "maxdelay"       : 3,
                             "log-size"       : 2,
-                            "log-count"      : "1",
+                            "log-count"      : 1,
                             "allow-shutdown" : "file",
+                            "basedir"        : "bdir",
+                            "host"           : "mstr",
+                            "port"           : 5678,
+                            "name"           : "name",
+                            "passwd"         : "pswd"})
+
+    def test_log_count_none(self):
+
+        # patch runner.MakerBase.postOptions() so that 'basedir'
+        # argument will not be converted to absolute path
+        self.patch(runner.MakerBase, "postOptions", mock.Mock())
+
+        opts = self.parse("--log-count=None", *self.req_args)
+        self.assertOptions(opts,
+                           {"log-count"      : None,
                             "basedir"        : "bdir",
                             "host"           : "mstr",
                             "port"           : 5678,
@@ -201,27 +216,27 @@ class TestCreateSlaveOptions(OptionsMixin, unittest.TestCase):
 
     def test_inv_keepalive(self):
         self.assertRaisesRegexp(usage.UsageError,
-                                "keepalive parameter needs to be an number",
+                                "keepalive parameter needs to be a number",
                                 self.parse, "--keepalive=X", *self.req_args)
 
     def test_inv_usepty(self):
         self.assertRaisesRegexp(usage.UsageError,
-                                "usepty parameter needs to be an number",
+                                "usepty parameter needs to be a number",
                                 self.parse, "--usepty=X", *self.req_args)
 
     def test_inv_maxdelay(self):
         self.assertRaisesRegexp(usage.UsageError,
-                                "maxdelay parameter needs to be an number",
+                                "maxdelay parameter needs to be a number",
                                 self.parse, "--maxdelay=X", *self.req_args)
 
     def test_inv_log_size(self):
         self.assertRaisesRegexp(usage.UsageError,
-                                "log-size parameter needs to be an number",
+                                "log-size parameter needs to be a number",
                                 self.parse, "--log-size=X", *self.req_args)
 
     def test_inv_log_count(self):
         self.assertRaisesRegexp(usage.UsageError,
-                        "log-count parameter needs to be an number or None",
+                        "log-count parameter needs to be a number or None",
                         self.parse, "--log-count=X", *self.req_args)
 
     def test_too_few_args(self):
@@ -262,7 +277,7 @@ class TestCreateSlaveOptions(OptionsMixin, unittest.TestCase):
         opts = runner.CreateSlaveOptions()
         self.assertRaisesRegexp(usage.UsageError,
                                 "invalid master port 'apple', "\
-                                "needs to be an number",
+                                "needs to be a number",
                                 opts.validateMasterArgument, "host:apple")
 
     def test_validateMasterArgument_ok(self):
