@@ -154,7 +154,7 @@ class CreateSlaveOptions(MakerBase):
             port = int(port)
         except ValueError:
             raise usage.UsageError("invalid master port '%s', "\
-                                   "needs to be an number" % port)
+                                   "needs to be a number" % port)
 
         return master, port
 
@@ -179,12 +179,14 @@ class CreateSlaveOptions(MakerBase):
             try:
                 self[argument] = int(self[argument])
             except ValueError:
-                raise usage.UsageError("%s parameter needs to be an number" \
+                raise usage.UsageError("%s parameter needs to be a number" \
                                                                     % argument)
-
-        if not re.match('^\d+$', self['log-count']) and \
-                self['log-count'] != 'None':
-            raise usage.UsageError("log-count parameter needs to be an number"
+        if re.match('^\d+$', self['log-count']):
+            self['log-count'] = int(self['log-count'])
+        elif self['log-count'] == 'None':
+            self['log-count'] = None
+        else:
+            raise usage.UsageError("log-count parameter needs to be a number"
                                    " or None")
 
 class Options(usage.Options):
