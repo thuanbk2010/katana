@@ -90,18 +90,6 @@ class TestStart(misc.StdoutAssertionsMixin, dirs.DirsMixin, unittest.TestCase):
             print res
         return d
 
-    @compat.skipUnlessPlatformIs('posix')
-    def test_start(self):
-        d = self.runStart()
-        @d.addCallback
-        def cb((out, err, rc)):
-            self.assertEqual((rc, err), (0, ''))
-            self.assertSubstring('BuildMaster is running', out)
-        return d
-
-    if twisted.version <= versions.Version('twisted', 9, 0, 0):
-        test_start.skip = test_start_quiet.skip = "Skipping due to suprious PotentialZombieWarning."
-
     # the remainder of this script does obscene things:
     #  - forks
     #  - shells out to tail
