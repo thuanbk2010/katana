@@ -31,10 +31,17 @@ from buildbot.util import lru
 import random
 
 def timerLogFinished(msg, timer):
-    log.msg(msg + " started at %s finished at %s elapsed %s" %
-            (util.epoch2datetime(timer.started),
-             util.epoch2datetime(util.now(timer._reactor)),
-             util.formatInterval(util.now(timer._reactor) - timer.started)))
+    finished = util.now(timer._reactor)
+    elapsed = "{0:.2f} secs".format(finished - timer.started)
+
+    log.msg(
+        msg + " started at %s finished at %s elapsed %s" %
+        (
+            util.epoch2datetime(timer.started),
+            finished,
+            elapsed
+        )
+    )
     timer.stop()
 
 def timerLogStart(msg, function_name):
