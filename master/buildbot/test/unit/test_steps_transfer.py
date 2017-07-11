@@ -60,7 +60,7 @@ class TestFileUpload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'uploadFile':
                 self.assertEquals(kwargs['slavesrc'], __file__)
                 writer = kwargs['writer']
@@ -92,7 +92,7 @@ class TestFileUpload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'uploadFile':
                 self.assertEquals(kwargs['slavesrc'], __file__)
                 writer = kwargs['writer']
@@ -129,7 +129,7 @@ class TestFileUpload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'uploadFile':
                 self.assertEquals(kwargs['slavesrc'], __file__)
                 writer = kwargs['writer']
@@ -199,7 +199,7 @@ class TestStringDownload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'downloadFile':
                 self.assertEquals(kwargs['slavedest'], 'hello.txt')
                 reader = kwargs['reader']
@@ -226,7 +226,7 @@ class TestJSONStringDownload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'downloadFile':
                 self.assertEquals(kwargs['slavedest'], 'hello.json')
                 reader = kwargs['reader']
@@ -257,7 +257,7 @@ class TestJSONPropertiesDownload(unittest.TestCase):
         for c in s.remote.method_calls:
             name, command, args = c
             commandName = command[3]
-            kwargs = command[-1]
+            kwargs = command[-2]
             if commandName == 'downloadFile':
                 self.assertEquals(kwargs['slavedest'], 'props.json')
                 reader = kwargs['reader']

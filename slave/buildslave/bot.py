@@ -112,7 +112,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if self.stopCommandOnShutdown:
             self.stopCommand()
 
-    def remote_startCommand(self, stepref, stepId, command, args):
+    def remote_startCommand(self, stepref, stepId, command, args, manifest=None):
         """
         This gets invoked by L{buildbot.process.step.RemoteCommand.start}, as
         part of various master-side BuildSteps, to start various commands
@@ -133,7 +133,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
         self.command = factory(self, stepId, args)
 
-        log.msg(" startCommand:%s [id %s]" % (command,stepId))
+        log.msg(" startCommand:%s [id %s]" % (command, stepId))
         self.remoteStep = stepref
         self.remoteStep.notifyOnDisconnect(self.lostRemoteStep)
         d = self.command.doStart()
