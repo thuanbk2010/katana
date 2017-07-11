@@ -201,6 +201,7 @@ define(function (require) {
             var branches = helpers.codebasesFromURL({}),
                 regex = [
                     /^(trunk)/,                 // Trunk
+                    /^(20[0-9][0-9].[0-9])\//,  // 2017.1/
                     /^([0-9].[0-9])\//,         // 5.0/
                     /^release\/([0-9].[0-9])/   // release/4.6
                 ],
