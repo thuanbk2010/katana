@@ -16,7 +16,7 @@ define(function (require) {
         latestRevDict = {},
         tags = new MiniSet(),
         branch_tags = new MiniSet(),// All of the tags that only contain a branch i.e 4.6, Trunk
-        tagAsBranchRegex = /^([0-9].[0-9]|trunk)$/i, // Regex for finding tags that are named the same as branches
+        tagAsBranchRegex = /^(20[0-9][0-9].[0-9]|[0-9].[0-9]|trunk)$/i, // Regex for finding tags that are named the same as branches
         savedTags = [],
         $tagsSelect,
         NO_TAG = "No Tag",
