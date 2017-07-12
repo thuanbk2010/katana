@@ -29,6 +29,8 @@ from buildslave.pbutil import ReconnectingPBClientFactory
 from buildslave.commands import registry, base
 from buildslave import monkeypatches
 
+import json
+
 class UnknownCommand(pb.Error):
     pass
 
@@ -112,6 +114,17 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if self.stopCommandOnShutdown:
             self.stopCommand()
 
+    def saveCommandOutputToLog(self, data):
+        lines = data.splitlines()
+        messages = []
+
+        for line in lines:
+            buildlog = self.manifest
+            buildlog['message'] = line
+            messages.append(buildlog)
+
+        self.bot.saveOutputToBuildLog(messages)
+
     def remote_startCommand(self, stepref, stepId, command, args, manifest=None):
         """
         This gets invoked by L{buildbot.process.step.RemoteCommand.start}, as
@@ -132,6 +145,8 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         except KeyError:
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
         self.command = factory(self, stepId, args)
+
+        self.manifest = manifest
 
         log.msg(" startCommand:%s [id %s]" % (command, stepId))
         self.remoteStep = stepref
@@ -245,10 +260,37 @@ class Bot(pb.Referenceable, service.MultiService):
         self.usePTY = usePTY
         self.unicode_encoding = unicode_encoding or sys.getfilesystemencoding() or 'ascii'
         self.builders = {}
+        self.logsdir = os.path.join(self.basedir, 'builds', 'logs')
+        self.buildsLogsFilePath = os.path.join(self.logsdir, 'stdio.log')
+        self.buildsLogsFile = None
+
+    def stopService(self):
+        self.closeBuildLogFile()
 
     def startService(self):
         assert os.path.isdir(self.basedir)
+        self.createBuildsLogFile()
         service.MultiService.startService(self)
+
+    def createBuildsLogFile(self):
+        if not os.path.isdir(self.logsdir):
+            os.makedirs(self.logsdir)
+
+        self.buildsLogsFile = open(self.buildsLogsFilePath, 'a')
+
+    def saveOutputToBuildLog(self, messages):
+        if not self.buildsLogsFile:
+            self.createBuildsLogFile()
+
+        for message in messages:
+            json.dump(message, self.buildsLogsFile)
+            self.buildsLogsFile.write(os.linesep)
+
+        self.buildsLogsFile.flush()
+
+    def closeBuildLogFile(self):
+        if self.buildsLogsFile:
+            self.buildsLogsFile.close()
 
     def remote_getCommands(self):
         commands = dict([
