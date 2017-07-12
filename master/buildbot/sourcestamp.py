@@ -252,9 +252,11 @@ class SourceStamp(util.ComparableMixin, styles.Versioned):
         return text
 
     def asDict(self, status=None):
-        result = {'revision': self.revision, 'revision_short': self.revision[:12] if self.revision is not None else "",
-                  'hasPatch': self.patch is not None}
-        # Constant
+        result = {
+            'revision': self.revision,
+            'revision_short': self.revision[:12] if self.revision is not None else "",
+            'hasPatch': self.patch is not None
+        }
 
         # TODO(maruel): Make the patch content a suburl.
         if self.patch:

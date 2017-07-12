@@ -29,6 +29,8 @@ from buildslave.pbutil import ReconnectingPBClientFactory
 from buildslave.commands import registry, base
 from buildslave import monkeypatches
 
+from twisted.python.logfile import LogFile
+
 import json
 
 class UnknownCommand(pb.Error):
@@ -119,8 +121,8 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         messages = []
 
         for line in lines:
-            buildlog = self.manifest
-            buildlog['message'] = line
+            buildlog = dict(self.manifest)
+            buildlog['message'] = line.strip()
             messages.append(buildlog)
 
         self.bot.saveOutputToBuildLog(messages)
@@ -249,6 +251,32 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         reactor.stop()
 
 
+class BuildLogFile(LogFile):
+
+    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None, maxRotatedFiles=None):
+        LogFile.__init__(self, name, directory, rotateLength, defaultMode, maxRotatedFiles)
+
+    def save(self, messages):
+        for message in messages:
+            json.dump(message, self)
+            self.write(os.linesep)
+
+        self.flush()
+        self.handleFileRotation()
+
+    def write(self, data):
+        """
+        Write some data to the file.
+        """
+        self._file.write(data)
+        self.size += len(data)
+
+    def handleFileRotation(self):
+        if self.shouldRotate():
+            self.flush()
+            self.rotate()
+
+
 class Bot(pb.Referenceable, service.MultiService):
     """I represent the slave-side bot."""
     usePTY = None
@@ -276,17 +304,17 @@ class Bot(pb.Referenceable, service.MultiService):
         if not os.path.isdir(self.logsdir):
             os.makedirs(self.logsdir)
 
-        self.buildsLogsFile = open(self.buildsLogsFilePath, 'a')
+        self.buildsLogsFile = BuildLogFile.fromFullPath(
+            self.buildsLogsFilePath,
+            maxRotatedFiles=10
+        )
 
     def saveOutputToBuildLog(self, messages):
         if not self.buildsLogsFile:
             self.createBuildsLogFile()
 
-        for message in messages:
-            json.dump(message, self.buildsLogsFile)
-            self.buildsLogsFile.write(os.linesep)
+        self.buildsLogsFile.save(messages)
 
-        self.buildsLogsFile.flush()
 
     def closeBuildLogFile(self):
         if self.buildsLogsFile:
