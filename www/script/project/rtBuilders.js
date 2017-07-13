@@ -16,7 +16,7 @@ define(function (require) {
         latestRevDict = {},
         tags = new MiniSet(),
         branch_tags = new MiniSet(),// All of the tags that only contain a branch i.e 4.6, Trunk
-        tagAsBranchRegex = /^([0-9].[0-9]|trunk)$/i, // Regex for finding tags that are named the same as branches
+        tagAsBranchRegex = /^(20[0-9][0-9].[0-9]|[0-9].[0-9]|trunk)$/i, // Regex for finding tags that are named the same as branches
         savedTags = [],
         $tagsSelect,
         NO_TAG = "No Tag",
@@ -201,6 +201,7 @@ define(function (require) {
             var branches = helpers.codebasesFromURL({}),
                 regex = [
                     /^(trunk)/,                 // Trunk
+                    /^(20[0-9][0-9].[0-9])\//,  // 2017.1/
                     /^([0-9].[0-9])\//,         // 5.0/
                     /^release\/([0-9].[0-9])/   // release/4.6
                 ],
