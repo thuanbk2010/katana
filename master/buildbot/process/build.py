@@ -447,6 +447,9 @@ class Build(properties.PropertiesMixin):
         buildchain = yield master.db.buildrequests.getBuildRequestBuildChain(startbrid)
         defer.returnValue(buildchain)
 
+    def getBuildRequestID(self):
+        return self.requests[0].id if len(self.requests) > 0 else None
+
     def getNextStep(self):
         """This method is called to obtain the next BuildStep for this build.
         When it returns None (or raises a StopIteration exception), the build

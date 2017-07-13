@@ -36,3 +36,5 @@ class FakeSlaveBuilder:
     def show(self):
         return pprint.pformat(self.updates)
 
+    def saveCommandOutputToLog(self, data):
+        pass

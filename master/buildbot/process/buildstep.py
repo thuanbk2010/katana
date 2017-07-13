@@ -579,7 +579,7 @@ class BuildStep(object, properties.PropertiesMixin):
         return {
             'buildbotURL': self.build.builder.master.config.buildbotURL,
             'buildNumber': self.build.build_status.number,
-            'buildRequestID': self.build.requests[0].id,
+            'buildRequestID': self.build.getBuildRequestID(),
             'builderName': self.build.builder.name,
             'slaveName': self.build.slavename,
             'stepName': self.name,

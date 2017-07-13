@@ -70,6 +70,9 @@ class FakeBuild(properties.PropertiesMixin):
     def buildFinished(self, text, results):
         pass
 
+    def getBuildRequestID(self):
+        pass
+
 
 components.registerAdapter(
         lambda build : build.build_status.properties,

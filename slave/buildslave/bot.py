@@ -66,6 +66,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
     def __init__(self, name):
         #service.Service.__init__(self) # Service has no __init__ method
         self.setName(name)
+        self.manifest = None
 
     def __repr__(self):
         return "<SlaveBuilder '%s' at %d>" % (self.name, id(self))
@@ -121,7 +122,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         messages = []
 
         for line in lines:
-            buildlog = dict(self.manifest)
+            buildlog = dict(self.manifest) if self.manifest else {}
             buildlog['message'] = line.strip()
             messages.append(buildlog)
 
