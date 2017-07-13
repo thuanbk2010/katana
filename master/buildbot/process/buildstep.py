@@ -113,9 +113,17 @@ class RemoteCommand(pb.Referenceable):
         # We will receive remote_update messages as the command runs.
         # We will get a single remote_complete when it finishes.
         # We should fire self.deferred when the command is done.
+        self._setManifest()
+
         d = self.remote.callRemote("startCommand", self, self.commandID,
-                                   self.remote_command, self.args, self.step.manifest)
+                                   self.remote_command, self.args)
         return d
+
+    def _setManifest(self):
+        if not self.args:
+            self.args = {'manifest': self.step.manifest}
+        elif isinstance(self.args, dict):
+            self.args['manifest'] = self.step.manifest
 
     def _finished(self, failure=None):
         if not self.active:
