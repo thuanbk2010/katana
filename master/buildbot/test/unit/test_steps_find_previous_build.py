@@ -18,6 +18,10 @@ class FakeSourceStamp(object):
     def asDict(self, includePatch = True):
         return self.__dict__.copy()
 
+    def getDict(self):
+        return self.__dict__.copy()
+
+
 class TestFindPreviousSuccessfulBuild(steps.BuildStepMixin, config.ConfigErrorsMixin, unittest.TestCase):
 
     def setUp(self):

@@ -34,6 +34,8 @@ from twisted.internet import reactor, defer, protocol, task, error
 from buildslave import util
 from buildslave.exceptions import AbandonChain
 
+from datetime import datetime
+
 if runtime.platformType == 'posix':
     from twisted.internet.process import Process
 
@@ -646,7 +648,8 @@ class RunProcess:
         logdata = []
         while self.buffered:
             # Grab the next bits from the buffer
-            logname, data = self.buffered.popleft()
+            logname, data, time = self.buffered.popleft()
+            self.builder.saveCommandOutputToLog(data, time)
 
             # If this log is different than the last one, then we have to send
             # out the message so far.  This is because the message is
@@ -698,7 +701,15 @@ class RunProcess:
         n = len(data)
 
         self.buflen += n
-        self.buffered.append((logname, data))
+
+        self.buffered.append(
+            (
+                logname,
+                data,
+                datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+            )
+        )
+
         if self.buflen > self.BUFFER_SIZE:
             self._sendBuffers()
         elif not self.buftimer:

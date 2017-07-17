@@ -29,6 +29,9 @@ class FakeBuildStatus(properties.PropertiesMixin, mock.Mock):
     def getInterestedUsers(self):
         return []
 
+    def getSourceStamps(self):
+        return []
+
 components.registerAdapter(
         lambda build_status : build_status.properties,
         FakeBuildStatus, interfaces.IProperties)
@@ -45,6 +48,7 @@ class FakeBuild(properties.PropertiesMixin):
         pr.build = self
         self.requests = buildrequests
         self.steps = []
+        self.slavename = None
 
         self.sources = {}
         if props is None:
@@ -64,6 +68,9 @@ class FakeBuild(properties.PropertiesMixin):
         pass
 
     def buildFinished(self, text, results):
+        pass
+
+    def getBuildRequestID(self):
         pass
 
 

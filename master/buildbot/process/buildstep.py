@@ -113,9 +113,17 @@ class RemoteCommand(pb.Referenceable):
         # We will receive remote_update messages as the command runs.
         # We will get a single remote_complete when it finishes.
         # We should fire self.deferred when the command is done.
+        self._setManifest()
+
         d = self.remote.callRemote("startCommand", self, self.commandID,
                                    self.remote_command, self.args)
         return d
+
+    def _setManifest(self):
+        if not self.args:
+            self.args = {'manifest': self.step.manifest}
+        elif isinstance(self.args, dict):
+            self.args['manifest'] = self.step.manifest
 
     def _finished(self, failure=None):
         if not self.active:
@@ -524,6 +532,7 @@ class BuildStep(object, properties.PropertiesMixin):
 
         self._acquiringLock = None
         self.stopped = False
+        self.manifest = None
 
     def __new__(klass, *args, **kwargs):
         self = object.__new__(klass)
@@ -574,8 +583,24 @@ class BuildStep(object, properties.PropertiesMixin):
         return [(l.getLock(self.build.slavebuilder.slave), la) for l, la in initialLocks]
 
 
+    def getManifest(self):
+        return {
+            'buildbotURL': self.build.builder.master.config.buildbotURL,
+            'buildNumber': self.build.build_status.number,
+            'buildRequestID': self.build.getBuildRequestID(),
+            'builderName': self.build.builder.name,
+            'slaveName': self.build.slavename,
+            'stepName': self.name,
+            'stepNumber': self.step_status.step_number,
+            'sourcestamps': [ss.getDict() for ss in self.build.build_status.getSourceStamps()],
+            'reason': self.build.build_status.reason,
+            'owners': self.build.build_status.owners,
+        }
+
+
     def startStep(self, remote):
         self.remote = remote
+        self.manifest = self.getManifest()
         self.deferred = defer.Deferred()
         # convert all locks into their real form
         self.locks = [(self.build.builder.botmaster.getLockByID(access.lockid), access) 

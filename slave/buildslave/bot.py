@@ -29,6 +29,10 @@ from buildslave.pbutil import ReconnectingPBClientFactory
 from buildslave.commands import registry, base
 from buildslave import monkeypatches
 
+from twisted.python.logfile import LogFile
+
+import json
+
 class UnknownCommand(pb.Error):
     pass
 
@@ -62,6 +66,7 @@ class SlaveBuilder(pb.Referenceable, service.Service):
     def __init__(self, name):
         #service.Service.__init__(self) # Service has no __init__ method
         self.setName(name)
+        self.manifest = None
 
     def __repr__(self):
         return "<SlaveBuilder '%s' at %d>" % (self.name, id(self))
@@ -112,6 +117,18 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if self.stopCommandOnShutdown:
             self.stopCommand()
 
+    def saveCommandOutputToLog(self, data, time):
+        lines = data.splitlines()
+        messages = []
+
+        for line in lines:
+            buildlog = dict(self.manifest) if self.manifest else {}
+            buildlog['time'] = time
+            buildlog['message'] = line.strip()
+            messages.append(buildlog)
+
+        self.bot.saveOutputToBuildLog(messages)
+
     def remote_startCommand(self, stepref, stepId, command, args):
         """
         This gets invoked by L{buildbot.process.step.RemoteCommand.start}, as
@@ -131,9 +148,11 @@ class SlaveBuilder(pb.Referenceable, service.Service):
             factory = registry.getFactory(command)
         except KeyError:
             raise UnknownCommand, "unrecognized SlaveCommand '%s'" % command
+
+        self.manifest = args.pop('manifest', {})
         self.command = factory(self, stepId, args)
 
-        log.msg(" startCommand:%s [id %s]" % (command,stepId))
+        log.msg(" startCommand:%s [id %s]" % (command, stepId))
         self.remoteStep = stepref
         self.remoteStep.notifyOnDisconnect(self.lostRemoteStep)
         d = self.command.doStart()
@@ -234,6 +253,32 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         reactor.stop()
 
 
+class BuildLogFile(LogFile):
+
+    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None, maxRotatedFiles=None):
+        LogFile.__init__(self, name, directory, rotateLength, defaultMode, maxRotatedFiles)
+
+    def save(self, messages):
+        for message in messages:
+            json.dump(message, self)
+            self.write(os.linesep)
+
+        self.flush()
+        self.handleFileRotation()
+
+    def write(self, data):
+        """
+        Write some data to the file.
+        """
+        self._file.write(data)
+        self.size += len(data)
+
+    def handleFileRotation(self):
+        if self.shouldRotate():
+            self.flush()
+            self.rotate()
+
+
 class Bot(pb.Referenceable, service.MultiService):
     """I represent the slave-side bot."""
     usePTY = None
@@ -245,10 +290,38 @@ class Bot(pb.Referenceable, service.MultiService):
         self.usePTY = usePTY
         self.unicode_encoding = unicode_encoding or sys.getfilesystemencoding() or 'ascii'
         self.builders = {}
+        self.logsdir = os.path.join(self.basedir, 'builds', 'logs')
+        self.buildsLogsFilePath = os.path.join(self.logsdir, 'stdio.log')
+        self.buildsLogsFile = None
+
+    def stopService(self):
+        self.closeBuildLogFile()
 
     def startService(self):
         assert os.path.isdir(self.basedir)
+        self.createBuildsLogFile()
         service.MultiService.startService(self)
+
+    def createBuildsLogFile(self):
+        if not os.path.isdir(self.logsdir):
+            os.makedirs(self.logsdir)
+
+        self.buildsLogsFile = BuildLogFile.fromFullPath(
+            self.buildsLogsFilePath,
+            maxRotatedFiles=10,
+            rotateLength=20*1000*1000  # 20 M
+        )
+
+    def saveOutputToBuildLog(self, messages):
+        if not self.buildsLogsFile:
+            self.createBuildsLogFile()
+
+        self.buildsLogsFile.save(messages)
+
+
+    def closeBuildLogFile(self):
+        if self.buildsLogsFile:
+            self.buildsLogsFile.close()
 
     def remote_getCommands(self):
         commands = dict([
