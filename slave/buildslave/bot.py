@@ -117,12 +117,13 @@ class SlaveBuilder(pb.Referenceable, service.Service):
         if self.stopCommandOnShutdown:
             self.stopCommand()
 
-    def saveCommandOutputToLog(self, data):
+    def saveCommandOutputToLog(self, data, time):
         lines = data.splitlines()
         messages = []
 
         for line in lines:
             buildlog = dict(self.manifest) if self.manifest else {}
+            buildlog['time'] = time
             buildlog['message'] = line.strip()
             messages.append(buildlog)
 
@@ -307,7 +308,8 @@ class Bot(pb.Referenceable, service.MultiService):
 
         self.buildsLogsFile = BuildLogFile.fromFullPath(
             self.buildsLogsFilePath,
-            maxRotatedFiles=10
+            maxRotatedFiles=10,
+            rotateLength=20*1000*1000  # 20 M
         )
 
     def saveOutputToBuildLog(self, messages):
