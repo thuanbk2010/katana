@@ -19,7 +19,7 @@ import sys
 import signal
 
 from twisted.spread import pb
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.internet import error, reactor, task, defer
 from twisted.application import service, internet
 from twisted.cred import credentials
@@ -273,10 +273,18 @@ class BuildLogFile(LogFile):
         self._file.write(data)
         self.size += len(data)
 
+    def _checkFileIsOpen(self):
+        if self._file.closed:
+            self._openFile()
+
     def handleFileRotation(self):
         if self.shouldRotate():
-            self.flush()
-            self.rotate()
+            try:
+                self.flush()
+                self.rotate()
+            except:
+                log.err(failure.Failure(), 'Rotate build log file failed')
+                self._checkFileIsOpen()
 
 
 class Bot(pb.Referenceable, service.MultiService):
@@ -308,8 +316,8 @@ class Bot(pb.Referenceable, service.MultiService):
 
         self.buildsLogsFile = BuildLogFile.fromFullPath(
             self.buildsLogsFilePath,
-            maxRotatedFiles=10,
-            rotateLength=20*1000*1000  # 20 M
+            maxRotatedFiles=3,
+            rotateLength=50*1000*1000  # 50 M
         )
 
     def saveOutputToBuildLog(self, messages):
