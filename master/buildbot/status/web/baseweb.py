@@ -424,7 +424,6 @@ class WebStatus(service.MultiService):
         #self.putChild("tgrid", TransposedGridStatusResource())
         self.putChild("buildqueue", BuildQueueResource()) # has buildqueue
         self.putChild("one_box_per_builder", Redirect("builders"))
-        self.putChild("changes", ChangesResource())
         self.putChild("buildslaves", BuildSlavesResource())
         self.putChild("buildstatus", BuildStatusStatusResource())
         self.putChild("one_line_per_build",
