@@ -33,8 +33,8 @@ from buildbot.status import client, html, status_gerrit, status_push
 modules.extend([client, html, status_gerrit, status_push])
 from buildbot.status import tinderbox, words
 modules.extend([tinderbox, words])
-from buildbot.status.web import baseweb, build, builder, buildstatus, changes
-modules.extend([baseweb, build, builder, buildstatus, changes])
+from buildbot.status.web import baseweb, build, builder, buildstatus
+modules.extend([baseweb, build, builder, buildstatus])
 from buildbot.status.web import console, feeds, grid, logs, olpb, root, slaves
 modules.extend([console, feeds, grid, logs, olpb, root, slaves])
 from buildbot.status.web import status_json, step, tests, waterfall
