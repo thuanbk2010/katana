@@ -719,7 +719,7 @@ class BuilderControl:
         return d
 
     @defer.inlineCallbacks
-    def rebuildBuild(self, bs, reason="<rebuild, no reason given>", extraProperties=None, absolute=True, newOwner=None):
+    def rebuildBuild(self, bs, reason="<rebuild, no reason given>", extraProperties=None, absolute=True, newOwner=''):
         if not bs.isFinished():
             return
 
