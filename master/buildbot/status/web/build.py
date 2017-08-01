@@ -77,10 +77,11 @@ class ForceBuildActionResource(ActionResource):
                 if bc:
                     msg += "could not get builder control"
             else:
-                tup = yield bc.rebuildBuild(b, 
+                tup = yield bc.rebuildBuild(b,
                     reason=reason, 
                     extraProperties=extraProperties,
-                    absolute=absolute)
+                    absolute=absolute,
+                    newOwner=authz.getUsernameFull(req))
                 # rebuildBuild returns None on error (?!)
                 if not tup:
                     msg = "rebuilding a build failed "+ str(tup)

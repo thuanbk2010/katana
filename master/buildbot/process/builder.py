@@ -719,7 +719,7 @@ class BuilderControl:
         return d
 
     @defer.inlineCallbacks
-    def rebuildBuild(self, bs, reason="<rebuild, no reason given>", extraProperties=None, absolute=True):
+    def rebuildBuild(self, bs, reason="<rebuild, no reason given>", extraProperties=None, absolute=True, newOwner=None):
         if not bs.isFinished():
             return
 
@@ -735,6 +735,13 @@ class BuilderControl:
         if 'buildLatestRev' in properties_dict.keys():
             (v,s) = properties_dict['buildLatestRev']
             properties_dict['buildLatestRev'] = (False, s)
+
+        if newOwner:
+            properties.setProperty('owner', newOwner, source='Builder rebuildBuild')
+
+            owners = bs.getProperty('owners')
+            owners.append(newOwner)
+            bs.setOwners(owners)
 
         ssList = bs.getSourceStamps(absolute=absolute)
         
