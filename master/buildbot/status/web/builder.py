@@ -601,9 +601,7 @@ class BuildersResource(HtmlResource):
         HtmlResource.__init__(self)
         self.project = project
         self.numbuilds = numbuilds
-        branch_name = self.project.codebases[0].itervalues().next()['branch']
-        
-        self.pageTitle = branch_name + " Builders"
+        self.pageTitle = self.getBranchName() + "Builders"
 
     @defer.inlineCallbacks
     def content(self, req, cxt):
@@ -648,4 +646,12 @@ class BuildersResource(HtmlResource):
             return StatusResourceSelectedBuilders(self.getStatus(req))
 
         return HtmlResource.getChild(self, path, req)
+
+    def getBranchName(self):
+        branch_name = ''
+        if len(self.project.codebases) > 0:
+            branch = self.project.codebases[0].itervalues().next()['branch']
+            if len(branch) > 0:
+                branch_name = branch[0] + ' '
+        return branch_name
 
