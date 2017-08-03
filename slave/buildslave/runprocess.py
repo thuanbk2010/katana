@@ -655,8 +655,10 @@ class RunProcess:
             logname, data, time = self.buffered.popleft()
             self.builder.saveCommandOutputToLog(data, time)
 
-            # exclude output from custom logfiles/artifacts
-            if not self.logfiles or not (isinstance(logname, tuple) and 'log' in logname):
+
+            # exclude saving the output from custom logfiles/artifacts
+            is_custom_log = isinstance(logname, tuple) and 'log' in logname  # exclude custom configured files
+            if not self.logfiles or not is_custom_log:
                 self.builder.saveCommandOutputToLog(data, time)
 
             # If this log is different than the last one, then we have to send
