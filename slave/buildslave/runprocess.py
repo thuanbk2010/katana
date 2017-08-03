@@ -651,6 +651,10 @@ class RunProcess:
             logname, data, time = self.buffered.popleft()
             self.builder.saveCommandOutputToLog(data, time)
 
+            # exclude output from custom logfiles/artifacts
+            if not self.logfiles or not (isinstance(logname, tuple) and 'log' in logname):
+                self.builder.saveCommandOutputToLog(data, time)
+
             # If this log is different than the last one, then we have to send
             # out the message so far.  This is because the message is
             # transferred as a dictionary, which makes the ordering of keys
