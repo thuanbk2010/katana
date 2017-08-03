@@ -270,9 +270,7 @@ class BuildLogFile(LogFile):
             json.dump(message, self)
             self.write(os.linesep)
         except:
-            log.err(failure.Failure(), "Failed to serialize message to json:")
-            log.msg("message:")
-            log.msg(message)
+            log.err(failure.Failure(), "Failed to serialize message to json: " + str(message))
 
     def write(self, data):
         """
