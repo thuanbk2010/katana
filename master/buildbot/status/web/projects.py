@@ -28,7 +28,7 @@ from buildbot.status.web.status_json import SingleProjectJsonResource
 
 
 class ProjectsResource(HtmlResource):
-    pageTitle = "Katana - Projects"
+    pageTitle = "Projects"
 
     def __init__(self, numbuilds=20):
         HtmlResource.__init__(self)
@@ -87,7 +87,7 @@ class ProjectsResource(HtmlResource):
     
 
 class CodeBasesResource(HtmlResource):
-    pageTitle = "Katana - Codebases"
+    pageTitle = "Codebases"
 
     def __init__(self, project, numbuilds=15):
         HtmlResource.__init__(self)
@@ -131,7 +131,7 @@ class CodeBasesResource(HtmlResource):
 
 # /builders/$project/comparison?branch_1=$branch1&branch_2=$branch2
 class BranchComparisonResource(HtmlResource):
-    pageTitle = "Katana - Branch Comparison"
+    pageTitle = "Branch Comparison"
 
     def __init__(self, project, numbuilds=15):
         HtmlResource.__init__(self)

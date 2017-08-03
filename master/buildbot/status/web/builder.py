@@ -265,7 +265,7 @@ class StatusResourceBuilder(HtmlResource, BuildLineMixin):
         self.numbuilds = numbuilds
 
     def getPageTitle(self, request):
-        return "Katana - %s" % self.builder_status.getFriendlyName()
+        return "%s" % self.builder_status.getFriendlyName()
 
     def getSlavesJsonResource(self, filters, url, slaves_dict):
         if not slaves_dict:
@@ -595,13 +595,15 @@ class StatusResourceSelectedBuilders(HtmlResource, BuildLineMixin):
 
 # /builders
 class BuildersResource(HtmlResource):
-    pageTitle = "Katana - Builders"
     addSlash = True
 
     def __init__(self, project, numbuilds=15):
         HtmlResource.__init__(self)
         self.project = project
         self.numbuilds = numbuilds
+        branch_name = self.project.codebases[0].itervalues().next()['branch']
+        
+        self.pageTitle = branch_name + " Builders"
 
     @defer.inlineCallbacks
     def content(self, req, cxt):

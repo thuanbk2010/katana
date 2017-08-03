@@ -8,7 +8,7 @@ from twisted.python import log
 
 
 class LoginKatanaResource(HtmlResource):
-    pageTitle = "Katana - Login"
+    pageTitle = "Login"
 
     def content(self, req, cxt):
         status = self.getStatus(req)

@@ -24,7 +24,7 @@ from buildbot.status.web.base import HtmlResource, getCodebasesArg, getRequestCh
 
 
 class FormsKatanaResource(HtmlResource):
-    pageTitle = "Katana - Forms"
+    pageTitle = "Forms"
 
     def content(self, request, cxt):
         cxt.update(content = "<h1>Page not found.</h1>")
