@@ -261,7 +261,6 @@ class BuildLogFile(LogFile):
     def save(self, messages):
         for message in messages:
             self.json_serialize(message)
-            self.write(os.linesep)
 
         self.flush()
         self.handleFileRotation()
@@ -269,6 +268,7 @@ class BuildLogFile(LogFile):
     def json_serialize(self, message):
         try:
             json.dump(message, self)
+            self.write(os.linesep)
         except:
             log.err(failure.Failure(), "Failed to serialize message to json:")
             log.msg("message:")

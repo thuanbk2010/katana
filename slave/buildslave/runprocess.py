@@ -28,7 +28,7 @@ import stat
 from collections import deque
 from tempfile import NamedTemporaryFile
 
-from twisted.python import runtime, log
+from twisted.python import runtime, log, failure
 from twisted.internet import reactor, defer, protocol, task, error
 
 from buildslave import util
@@ -112,9 +112,13 @@ class LogFileWatcher:
         self.poller = None
 
     def stop(self):
-        self.poll()
-        if self.poller is not None:
-            self.poller.stop()
+        try:
+            self.poll()
+            if self.poller is not None:
+                self.poller.stop()
+        except:
+            log.err(failure.Failure(), 'LogFileWatcher failed to stop poller')
+
         if self.started:
             self.f.close()
 
