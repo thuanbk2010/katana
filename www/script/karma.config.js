@@ -37,8 +37,8 @@ module.exports = function (config) {
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
-            'script/templates/**/*.mustache': [''],
-            'script/templates/**/*.handlebars': [''],
+            'script/templates/**/*.mustache': ['coverage'],
+            'script/templates/**/*.handlebars': ['coverage'],
             'script/project/*.js': ['coverage']
         },
 

@@ -28,7 +28,7 @@ import stat
 from collections import deque
 from tempfile import NamedTemporaryFile
 
-from twisted.python import runtime, log
+from twisted.python import runtime, log, failure
 from twisted.internet import reactor, defer, protocol, task, error
 
 from buildslave import util
@@ -112,9 +112,13 @@ class LogFileWatcher:
         self.poller = None
 
     def stop(self):
-        self.poll()
-        if self.poller is not None:
-            self.poller.stop()
+        try:
+            self.poll()
+            if self.poller is not None:
+                self.poller.stop()
+        except:
+            log.err(failure.Failure(), 'LogFileWatcher failed to stop poller')
+
         if self.started:
             self.f.close()
 
@@ -650,6 +654,12 @@ class RunProcess:
             # Grab the next bits from the buffer
             logname, data, time = self.buffered.popleft()
             self.builder.saveCommandOutputToLog(data, time)
+
+
+            # exclude saving the output from custom logfiles/artifacts
+            is_custom_log = isinstance(logname, tuple) and 'log' in logname  # exclude custom configured files
+            if not self.logfiles or not is_custom_log:
+                self.builder.saveCommandOutputToLog(data, time)
 
             # If this log is different than the last one, then we have to send
             # out the message so far.  This is because the message is
