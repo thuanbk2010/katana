@@ -330,9 +330,6 @@ define(function (require) {
                         return "N/A";
                     }
 
-                    if (type === 'sort') {
-                        return "N/A";
-                    }
                     return "N/A";
                 }
             };
