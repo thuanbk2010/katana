@@ -331,7 +331,7 @@ define(function (require) {
                     }
 
                     if (type === 'sort') {
-                        return 0;
+                        return "N/A";
                     }
                     return "N/A";
                 }
