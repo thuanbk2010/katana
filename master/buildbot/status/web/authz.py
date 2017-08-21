@@ -88,7 +88,7 @@ class BuildbotSession(SessionHandler):
         session = self.getSession(request, sessions)
         if session is not None:
             session.expire()
-            request.addCookie(self.key, None, expires=session.getExpiration(), path="/")
+            request.addCookie(self.key, '', expires=session.getExpiration(), path="/")
 
 class JsonWebTokens(SessionHandler):
     implements(ISessionHandler)
