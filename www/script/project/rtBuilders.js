@@ -29,6 +29,7 @@ define(function (require) {
         $searchField;
 
     require('libs/jquery.form');
+    require('libs/absolute');
 
     var rtBuilders = {
         init: function () {
@@ -296,11 +297,11 @@ define(function (require) {
                 {"mData": null, "sWidth": "7%", "sType": "string-ignore-empty"},
                 {"mData": null, "sWidth": "13%", "sType": "natural"},
                 {"mData": null, "sWidth": "10%", "sType": "numeric"},
-                {"mData": null, "sWidth": "15%", "sType": "number-ignore-zero"},
+                {"mData": null, "sWidth": "15%", "sType": "number-ignore-zero", "asSorting": ['desc','asc']},
                 {"mData": null, "sWidth": "15%", "sType": "builder-status"},
                 {"mData": null, "sWidth": "5%", "bSortable": false},
                 {"mData": null, "sWidth": "15%", "bSortable": false},
-                {"mData": null, "sWidth": "5%", "sType": "natural"},
+                {"mData": null, "sWidth": "5%", "sType": numbersWithNA},
                 {"mData": null, "sWidth": "5%", "bSortable": false}
             ];
 
@@ -403,6 +404,9 @@ define(function (require) {
             }
         }, 1000)
     };
+    var numbersWithNA = $.fn.dataTable.absoluteOrder( [
+            { value: 'N/A', position: 'bottom' }
+    ] );
 
     return rtBuilders;
 });
