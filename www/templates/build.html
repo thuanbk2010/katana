@@ -2,8 +2,6 @@
 {% import 'submenu.html' as submenu %}
 {% import 'forms.html' as forms %}
 {% from "box_macros.html" import box %}
-{% from "change_macros.html" import change with context %}
-{% from "change_macros.html" import changeth with context %}
 
 {% set bodyId = 'id="builddetail_page"' %}
 
@@ -406,44 +404,5 @@
         </div>
     </div>
 </div>
-
-{% if has_changes %}
-
-<h2 class="head-2">All Changes</h2>
-{% for ss in sourcestamps %}
-{% if ss.changes %}
-{% if ss.codebase %}
-<h3 class="codebase-change-txt" id="changes-{{ ss.codebase }}">
-    {{ ss.codebase }}
-</h3>
-{% endif %}
-<div class="dataTables_wrapper">
-    <table class="table table-katana var-1">
-
-        {% for c in ss.changes %}
-
-        {% if loop.index == 1 %}
-        {{ changeth(c.asDict()) }}
-        {% endif %}
-        {% if c.category %}
-        <th>Category</th>
-        {% endif %}
-
-        {{ change(c.asDict()) }}
-        {% endfor %}
-        {% if ss.totalChanges > ss.changes|length %}
-        {% set further_changes = ss.totalChanges - ss.changes|length %}
-        <tr>
-            <td colspan="6" style="text-align: center">There are {{ further_changes }} further changes in this build.
-            </td>
-        </tr>
-        {% endif %}
-    </table>
-</div>
-{% endif %}
-
-{% endfor %}
-
-{% endif %}
 
 {% endblock %}

@@ -36,7 +36,6 @@ from buildbot.status.web.console import ConsoleStatusResource
 from buildbot.status.web.olpb import OneLinePerBuild
 from buildbot.status.web.grid import GridStatusResource
 from buildbot.status.web.grid import TransposedGridStatusResource
-from buildbot.status.web.changes import ChangesResource
 from buildbot.status.web.buildqueue import BuildQueueResource
 from buildbot.status.web.buildstatus import BuildStatusStatusResource
 from buildbot.status.web.slaves import BuildSlavesResource
@@ -424,7 +423,6 @@ class WebStatus(service.MultiService):
         #self.putChild("tgrid", TransposedGridStatusResource())
         self.putChild("buildqueue", BuildQueueResource()) # has buildqueue
         self.putChild("one_box_per_builder", Redirect("builders"))
-        self.putChild("changes", ChangesResource())
         self.putChild("buildslaves", BuildSlavesResource())
         self.putChild("buildstatus", BuildStatusStatusResource())
         self.putChild("one_line_per_build",
