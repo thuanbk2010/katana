@@ -17,6 +17,7 @@ import re
 from twisted.python import log
 from os.path import join, basename, splitext
 from buildbot.status.web.base import HtmlResource, path_to_builder, path_to_builders, path_to_codebases, path_to_build
+from twisted.python.failure import Failure
 
 
 class JSONTestResource(HtmlResource):
@@ -91,17 +92,17 @@ class JSONTestResource(HtmlResource):
                     .format(self.__class__.__name__)
         except KeyError as e:
             error_message = "[{0}] Key error in json: {1}".format(self.__class__.__name__, e)
-        except:
+        except Exception:
             import sys
             import traceback
             extype, ex, tb = sys.exc_info()
             formatted = traceback.format_exception_only(extype, ex)[-1]
             error_message = "[{0}] Unexpected exception caught while loading JSON test report data: {1}"\
                 .format(self.__class__.__name__, '\n\t'.join(formatted.splitlines()))
+            log.msg(Failure(), "Unexpected exception caught while loading JSON test report data")
 
         if error_message is not None:
             cxt['data_error'] = error_message
-            log.msg(error_message)
 
         template = req.site.buildbot_service.templates.get_template("jsontestresults.html")
         return template.render(**cxt)
