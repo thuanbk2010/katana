@@ -111,7 +111,8 @@ class TestJSONTestResource(unittest.TestCase):
         json_resource.content(req, ctx)
 
         self.assertTrue('data' not in ctx)
-        self.assertTrue('results' not in ctx)
+        self.assertTrue('data_error' in ctx)
+        self.assertTrue('results' in ctx)
         self.assertEqual(ctx['builder_name'], 'BuilderStatusFriendlyName')
         self.assertEqual(ctx['path_to_builder'], 'projects/Example%20Project/builders/BuilderStatusName')
         self.assertEqual(ctx['path_to_builders'], 'projects/Example%20Project/builders')
@@ -151,8 +152,8 @@ class TestJSONTestResource(unittest.TestCase):
         ctx = {}
         json_resource.content(req, ctx)
 
-        self.assertTrue(ctx['data'], data)
-
+        self.assertTrue(ctx['data_error'], data)
+        self.assertTrue('data' not in ctx)
         self.assertEqual(ctx['builder_name'], 'BuilderStatusFriendlyName')
         self.assertEqual(ctx['path_to_builder'], 'projects/Example%20Project/builders/BuilderStatusName')
         self.assertEqual(ctx['path_to_builders'], 'projects/Example%20Project/builders')
