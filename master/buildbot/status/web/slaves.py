@@ -88,7 +88,7 @@ class OneBuildSlaveResource(HtmlResource, BuildLineMixin):
         self.slavename = slavename
 
     def getPageTitle(self, req):
-        return "Katana - %s" % self.slavename
+        return "%s" % self.slavename
 
     def getChild(self, path, req):
         s = self.getStatus(req)
@@ -176,7 +176,7 @@ class OneBuildSlaveResource(HtmlResource, BuildLineMixin):
 
 # /buildslaves
 class BuildSlavesResource(HtmlResource):
-    pageTitle = "Katana Build slaves"
+    pageTitle = "Build slaves"
     addSlash = True
 
     def content(self, request, cxt):

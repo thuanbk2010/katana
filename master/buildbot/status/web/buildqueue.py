@@ -28,7 +28,7 @@ from buildbot.status.web.status_json import QueueJsonResource
 from buildbot.status.results import RESUME
 
 class BuildQueueResource(HtmlResource):
-    pageTitle = "Katana - Build Queue"
+    pageTitle = "Build Queue"
     addSlash = True
 
     def __init__(self):
