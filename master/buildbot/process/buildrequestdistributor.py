@@ -597,6 +597,9 @@ class KatanaBuildChooser(BasicBuildChooser):
 
     @defer.inlineCallbacks
     def fetchPreviouslyMergedBuildRequests(self, breqs, queue):
+        timer = timerLogStart("fetchPreviouslyMergedBuildRequests starting",
+                              function_name="KatanaBuildChooser.fetchPreviouslyMergedBuildRequests")
+
         brids = [breq.id for breq in breqs]
         brdicts = yield self.master.db.buildrequests.getBuildRequestsInQueue(queue=queue,
                                                                              buildername=self.bldr.name,
@@ -604,6 +607,9 @@ class KatanaBuildChooser(BasicBuildChooser):
                                                                              order=False)
         merged_breqs = yield defer.gatherResults([self._getBuildRequestForBrdict(brdict)
                                                   for brdict in brdicts])
+
+        timerLogFinished(msg="fetchPreviouslyMergedBuildRequests finished", timer=timer)
+
         defer.returnValue(breqs + merged_breqs)
 
     @defer.inlineCallbacks
@@ -681,6 +687,9 @@ class KatanaBuildChooser(BasicBuildChooser):
 
     @defer.inlineCallbacks
     def mergeBuildingRequests(self, brids, breqs, queue):
+        timer = timerLogStart("mergeBuildingRequests starting",
+                              function_name="KatanaBuildChooser.mergeBuildingRequests")
+
         # check only the first br others will be compatible to merge
         for b in self.bldr.building:
             if not b.finished and self.mergeRequestsFn(self.bldr, b.requests[0], breqs[0]):
@@ -701,9 +710,13 @@ class KatanaBuildChooser(BasicBuildChooser):
 
                 b.requests += breqs
                 log.msg("merge brids %s with building request %s " % (brids, b.requests[0].id))
+                timerLogFinished(msg="mergeBuildingRequests finished", timer=timer)
                 self.notifyRequestsRemoved(breqs)
                 defer.returnValue(b)
                 return
+
+        timerLogFinished(msg="mergeBuildingRequests finished", timer=timer)
+
         defer.returnValue(None)
 
     @defer.inlineCallbacks
@@ -750,7 +763,9 @@ class KatanaBuildChooser(BasicBuildChooser):
                 br.checkMerges = False
                 br.hasBeenMerged = hasBeenMerged
 
-            timerLogFinished(msg="mergeCompatibleBuildRequests finished", timer=timer)
+            timerLogFinished(
+                msg="mergeCompatibleBuildRequests finished (hasBeenMerged=%s)" % str(hasBeenMerged),
+                timer=timer)
 
         # 2. try merge this build with a compatible running build
         if breq and self.bldr.building:
