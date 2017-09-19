@@ -15,7 +15,7 @@ define(function (require) {
         infoSpan = $buildLoadBox.find('span'),
         minBuildsPerSlave = 3, // The amount of builds each agent is allowed to have before we get yellow build load
         maxBuildsPerSlave = 5, // The amount of builds each agent is allowed to have before we get red build load
-        maxAllowedLoad = 2000, // The maximum number of builds allowed before people cannot schedule anymore builds
+        maxAllowedLoad = 1500, // The maximum number of builds allowed before people cannot schedule anymore builds
         buildLoad = 0,
         bKatanaLoaded = false,
         bKatanaMaxLoaded = false;
