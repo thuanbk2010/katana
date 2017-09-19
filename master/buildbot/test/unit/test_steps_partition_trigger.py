@@ -160,7 +160,7 @@ class TestPartitionTrigger(steps.BuildStepMixin, unittest.TestCase):
 
         self.expectOutcome(result=SUCCESS, status_text=["Triggered:", "'a'"])
         self.aExpectTriggeredWith([
-            ({}, {'stepname': ('PartitionTrigger', 'Trigger')}, 1)
+            ({}, {}, 1)
         ])
         return self.runStep()
 
@@ -174,9 +174,9 @@ class TestPartitionTrigger(steps.BuildStepMixin, unittest.TestCase):
 
         self.expectOutcome(result=SUCCESS, status_text=["Triggered:", "'a' (split into 3 partitions)"])
         self.aExpectTriggeredWith([
-            ({}, {'partition-index': (0, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1),
-            ({}, {'partition-index': (1, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1),
-            ({}, {'partition-index': (2, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1)
+            ({}, {'partition-index': (0, 'PartitionTrigger')}, 1),
+            ({}, {'partition-index': (1, 'PartitionTrigger')}, 1),
+            ({}, {'partition-index': (2, 'PartitionTrigger')}, 1)
         ])
         return self.runStep()
 
@@ -194,12 +194,12 @@ class TestPartitionTrigger(steps.BuildStepMixin, unittest.TestCase):
 
         self.expectOutcome(result=SUCCESS, status_text=["Triggered:", "'a' (split into 3 partitions)", "'b' (split into 2 partitions)"])
         self.aExpectTriggeredWith([
-            ({}, {'partition-index': (0, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1),
-            ({}, {'partition-index': (1, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1),
-            ({}, {'partition-index': (2, 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1)
+            ({}, {'partition-index': (0, 'PartitionTrigger')}, 1),
+            ({}, {'partition-index': (1, 'PartitionTrigger')}, 1),
+            ({}, {'partition-index': (2, 'PartitionTrigger')}, 1)
         ])
         self.bExpectTriggeredWith([
-            ({}, {'partition-index': (0, 'PartitionTrigger'), 'foo': ('bar', 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1),
-            ({}, {'partition-index': (1, 'PartitionTrigger'), 'foo': ('baz', 'PartitionTrigger'), 'stepname': ('PartitionTrigger', 'Trigger')}, 1)
+            ({}, {'partition-index': (0, 'PartitionTrigger'), 'foo': ('bar', 'PartitionTrigger')}, 1),
+            ({}, {'partition-index': (1, 'PartitionTrigger'), 'foo': ('baz', 'PartitionTrigger')}, 1)
         ])
         return self.runStep()
