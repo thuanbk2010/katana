@@ -263,7 +263,6 @@ class BuildLogFile(LogFile):
             self.json_serialize(message)
 
         self.flush()
-        self.handleFileRotation()
 
     def json_serialize(self, message):
         try:
@@ -325,6 +324,8 @@ class Bot(pb.Referenceable, service.MultiService):
             maxRotatedFiles=3,
             rotateLength=50*1000*1000  # 50 M
         )
+
+        self.buildsLogsFile.handleFileRotation()
 
     def saveOutputToBuildLog(self, messages):
         if not self.buildsLogsFile:
