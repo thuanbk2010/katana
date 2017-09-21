@@ -735,11 +735,11 @@ class BuilderControl:
         if 'buildLatestRev' in properties_dict.keys():
             (v,s) = properties_dict['buildLatestRev']
             properties_dict['buildLatestRev'] = (False, s)
+            owners = bs.getProperty('owners')
 
-        if newOwner:
+        if newOwner and owners is not None and newOwner not in owners:
             properties.setProperty('owner', newOwner, source='Builder rebuildBuild')
 
-            owners = bs.getProperty('owners')
             owners.append(newOwner)
             bs.setOwners(owners)
 
