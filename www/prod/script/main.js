@@ -30855,7 +30855,7 @@ define('rtGlobal',['require','jquery','helpers','project/datatables-extend','ui.
         infoSpan = $buildLoadBox.find('span'),
         minBuildsPerSlave = 3, // The amount of builds each agent is allowed to have before we get yellow build load
         maxBuildsPerSlave = 5, // The amount of builds each agent is allowed to have before we get red build load
-        maxAllowedLoad = 1500, // The maximum number of builds allowed before people cannot schedule anymore builds
+        maxAllowedLoad = 2000, // The maximum number of builds allowed before people cannot schedule anymore builds
         buildLoad = 0,
         bKatanaLoaded = false,
         bKatanaMaxLoaded = false;
@@ -31555,7 +31555,7 @@ define('ui.popup',['require','jquery','helpers','project/handlebars-extend','tim
                                                         " (and because  we notice a significant degradation in" +
                                                         " processing time due to non-scalable resource constraints" +
                                                         " when the outstanding build load is too high), users are not" +
-                                                        " allowed to initiate builds when the build load is above 1500." +
+                                                        " allowed to initiate builds when the build load is above 2000." +
                                                         "  We apologize for the inconvenience and hope to be able to" +
                                                         " raise this limit in the future.");
                                                     return false;
