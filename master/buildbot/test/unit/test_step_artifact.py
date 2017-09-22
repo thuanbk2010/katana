@@ -303,7 +303,6 @@ class TestArtifactSteps(steps.BuildStepMixin, unittest.TestCase):
                                                  artifactDirectory="mydir",
                                                  artifactServer='usr@srv.com',
                                                  artifactServerDir='/home/srv/web/dir'), [fake_br2, fake_trigger])
-
         self.expectCommands(
             ExpectShell(workdir='wkdir', usePTY='slave-config',
                         command='for i in 1 2 3 4 5; do rsync -var --progress --partial ' +
@@ -313,4 +312,122 @@ class TestArtifactSteps(steps.BuildStepMixin, unittest.TestCase):
             + 0
         )
         self.expectOutcome(result=SUCCESS, status_text=["Downloaded 'B'."])
+        return self.runStep()
+
+    def test_download_artifact_fromchildren_reusing_artifacts(self):
+        # In this test we expect DownloadArtifactsFromChildren to download artifacts from following build request ids:
+        # '2' because `artifactbrid` is null which means that build request contains artifacts on itself
+        # '666' - because build request '3' reused it
+        # The test data also include and build request '4', referring '666'.
+        # The test also checks that it will not be downloaded.
+        # We don't want to download the same artifact more than once
+        br2 = fakedb.BuildRequest(id=2, buildsetid=2, buildername="B", triggeredbybrid=1, artifactbrid=None)
+        br3 = fakedb.BuildRequest(id=3, buildsetid=3, buildername="B", triggeredbybrid=1, artifactbrid=666)
+        br4 = fakedb.BuildRequest(id=4, buildsetid=4, buildername="B", triggeredbybrid=1, artifactbrid=666)
+        br666 = fakedb.BuildRequest(id=666, buildsetid=5, buildername="B", triggeredbybrid=None)
+
+        self.setupStep(
+            artifact.DownloadArtifactsFromChildren(
+                workdir='build',
+                artifactServer='usr@srv.com',
+                artifactServerDir='/artifacts',
+                artifactServerPort=22,
+                artifactDirectory='mydir',
+                artifactBuilderName='B',
+                artifactDestination='./base/local',
+        ), [br2, br3, br4, br666])
+
+        expectedRemote1 = '\'usr@srv.com:/artifacts/B/2_01_01_1970_00_00_00_+0000/mydir/\''
+        expectedRemote2 = '\'usr@srv.com:/artifacts/B/666_01_01_1970_00_00_00_+0000/mydir/\''
+
+        expectedLocal1 = './base/local/2'
+        expectedLocal2 = './base/local/666'
+
+        self.expectCommands(
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command=['mkdir', '-p', expectedLocal1]) +
+            0,
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command='for i in 1 2 3 4 5; do rsync -var --progress --partial ' +
+                                expectedRemote1 + " '" + expectedLocal1 + "'"
+                                ' --rsh=\'ssh -p 22\'; if [ $? -eq 0 ]; then exit 0; else sleep 5; fi; done; exit -1'
+                        ) +
+            0,
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command=['mkdir', '-p', expectedLocal2]) +
+            0,
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command='for i in 1 2 3 4 5; do rsync -var --progress --partial ' +
+                                expectedRemote2 + " '" + expectedLocal2 + "'" +
+                                ' --rsh=\'ssh -p 22\'; if [ $? -eq 0 ]; then exit 0; else sleep 5; fi; done; exit -1'
+                        ) +
+            0 +
+            ExpectShell.log('stdio', stdout='')
+        )
+
+        self.expectOutcome(result=SUCCESS, status_text=['Downloaded artifacts from 2 partitions'])
+        return self.runStep()
+
+    def test_download_artifact_fromchildren_windows(self):
+        br2 = fakedb.BuildRequest(id=2, buildsetid=2, buildername="B", triggeredbybrid=1)
+
+        self.setupStep(
+            artifact.DownloadArtifactsFromChildren(
+                workdir='build',
+                artifactServer='usr@srv.com',
+                artifactServerDir='/artifacts',
+                artifactServerPort=22,
+                artifactDirectory='mydir',
+                artifactBuilderName='B',
+                artifactDestination='./base/local'
+        ), [br2], winslave=True)
+
+        expectedRemote = '\'usr@srv.com:/artifacts/B/2_01_01_1970_00_00_00_+0000/mydir/\''
+        expectedLocal = './base/local/2'
+        expectedLocalMkDirPath = r'base\local\2'
+
+        self.expectCommands(
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command=['mkdir', expectedLocalMkDirPath]) +
+            0,
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command='powershell.exe -C for ($i=1; $i -le  5; $i++) { rsync -var --progress --partial ' +
+                                expectedRemote + " '" + expectedLocal + "'" +
+                                ' --rsh=\'ssh -p 22\'; if ($?) { exit 0 } else { sleep 5} } exit -1'
+                        ) +
+            0 +
+            ExpectShell.log('stdio', stdout='')
+        )
+
+        self.expectOutcome(result=SUCCESS,  status_text=['Downloaded artifacts from 1 partitions'])
+        return self.runStep()
+
+    def test_download_artifact_fromchildren_defaultparams(self):
+        br2 = fakedb.BuildRequest(id=2, buildsetid=2, buildername="B", triggeredbybrid=1)
+
+        self.setupStep(
+            artifact.DownloadArtifactsFromChildren(
+                workdir='build',
+                artifactServer='usr@srv.com',
+                artifactServerDir='/artifacts',
+                artifactServerPort=22,
+                artifactBuilderName='B',
+        ), [br2])
+
+        expectedRemote = '\'usr@srv.com:/artifacts/B/2_01_01_1970_00_00_00_+0000/\''
+        expectedLocal = '2'
+
+        self.expectCommands(
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command=['mkdir', '-p', expectedLocal]) + 0,
+            ExpectShell(workdir='build', usePTY='slave-config',
+                        command='for i in 1 2 3 4 5; do rsync -var --progress --partial ' +
+                                expectedRemote +  " '" + expectedLocal + "'" +
+                                ' --rsh=\'ssh -p 22\'; if [ $? -eq 0 ]; then exit 0; else sleep 5; fi; done; exit -1'
+                        ) +
+            0 +
+            ExpectShell.log('stdio', stdout='')
+        )
+
+        self.expectOutcome(result=SUCCESS, status_text=['Downloaded artifacts from 1 partitions'])
         return self.runStep()

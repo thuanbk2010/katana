@@ -783,6 +783,22 @@ class TestBuildsetsConnectorComponent(
         d.addCallback(check)
         return d
 
+    def test_getBuildRequestsTriggeredBy(self):
+        breqs = [fakedb.BuildRequest(id=1, buildsetid=1, buildername="A"),
+                 fakedb.BuildRequest(id=2, buildsetid=2, buildername="B", triggeredbybrid=1),
+                 fakedb.BuildRequest(id=3, buildsetid=3, buildername="B", triggeredbybrid=1)
+                 ]
+        d = self.insertTestData(breqs)
+        d.addCallback(lambda _:
+                      self.db.buildrequests.getBuildRequestsTriggeredBy(triggeredbybrid=1, buildername='B'))
+
+        def check(breqs):
+            brids = [i['brid'] for i in breqs]
+            self.assertEqual(sorted(brids), [2,3])
+
+        d.addCallback(check)
+        return d
+
     def test_getBuildRequestsFilteredBySourceStampsFound(self):
         d = self.buildRequestWithSources(complete=0, results=-1)
         sources = [{'b_codebase': '1', 'b_revision': 'a', 'b_sourcestampsetid': 2, 'b_branch': 'master'},
