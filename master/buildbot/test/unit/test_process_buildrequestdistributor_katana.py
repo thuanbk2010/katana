@@ -502,6 +502,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
 
     @defer.inlineCallbacks
     def test_maybeStartOrResumeBuildsOnMergesRunningBuilds(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
         self.setupBuilderInMaster(name='bldr1', slavenames={'slave-01': True},
                                   startSlavenames={'slave-02': True}, addRunningBuilds=True)
         self.initialized()
@@ -514,6 +515,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
 
     @defer.inlineCallbacks
     def test_maybeStartOrResumeBuildsOnMergesResumeRunningBuilds(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
         self.setupBuilderInMaster(name='bldr1', slavenames={'slave-01': True},
                                   startSlavenames={'slave-02': True}, addRunningBuilds=True)
 
@@ -559,6 +561,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
 
     @defer.inlineCallbacks
     def test_maybeStartOrResumeBuildsOnMergesFinishedBuilds(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
         self.setupBuilderInMaster(name='bldr1', slavenames={'slave-01': True},
                                   startSlavenames={'slave-02': True})
 
@@ -568,6 +571,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
 
     @defer.inlineCallbacks
     def test_maybeStartOrResumeBuildsOnMergesResumeFinishedBuilds(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
         self.setupBuilderInMaster(name='bldr1', slavenames={'slave-01': True},
                                   startSlavenames={'slave-02': True})
 
@@ -592,6 +596,7 @@ class TestKatanaBuildRequestDistributorMaybeStartBuildsOn(KatanaBuildRequestDist
     @defer.inlineCallbacks
     @compat.usesFlushLoggedErrors
     def test_maybeStartOrResumeBuildsOnHandleFailuresWhenMergingFinishedBuilds(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
         self.setupBuilderInMaster(name='bldr1', slavenames={'slave-01': True},
                                   startSlavenames={'slave-02': True}, addRunningBuilds=True)
 
@@ -955,6 +960,8 @@ class TestKatanaMaybeStartBuildsOnBuilder(KatanaBuildRequestDistributorTestSetup
 
     @defer.inlineCallbacks
     def test_maybeStartBuild_mergeBuilding(self):
+        raise unittest.SkipTest("Merging functionality has been disable skipping test")
+
         self.addSlaves({'slave-01': 1})
 
         yield self.do_test_maybeStartBuildsOnBuilder(rows=self.base_rows, exp_brids=[1])

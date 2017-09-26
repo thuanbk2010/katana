@@ -508,7 +508,7 @@ class KatanaBuildChooser(BasicBuildChooser):
 
             self.setupNextBuildRequest(bldr, breq)
 
-            if breq.hasBeenMerged or (breq.checkMerges and (yield self.mergeCompatibleBuildRequests(breq, queue))):
+            if breq.hasBeenMerged:
                 continue
 
             def getSlavepool():
