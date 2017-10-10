@@ -94,4 +94,12 @@
         </span>
     {{/unless}}
 
+    {{#if b.build_tags.length}}
+        <div>
+            {{#each b.build_tags}}
+                <span class="label label-warning" title="{{this.description}}">{{this.title}}</span>
+            {{/each}}
+        </div>
+    {{/if}}
+
 {{/buildResults}}
