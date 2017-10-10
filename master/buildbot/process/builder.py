@@ -685,10 +685,11 @@ class Builder(config.ReconfigurableServiceMixin,
             return True
         if req1.properties.has_key('selected_slave') or req2.properties.has_key('selected_slave'):
             return False
-        if self.getBoolProperty(req1, "force_rebuild") != self.getBoolProperty(req2, "force_rebuild"):
-            return False
-        if self.getBoolProperty(req1, "force_chain_rebuild") != self.getBoolProperty(req2, "force_chain_rebuild"):
-            return False
+        if not req1.isMergingWithPrevious:
+            if self.getBoolProperty(req1, "force_rebuild") != self.getBoolProperty(req2, "force_rebuild"):
+                return False
+            if self.getBoolProperty(req1, "force_chain_rebuild") != self.getBoolProperty(req2, "force_chain_rebuild"):
+                return False
         return True
 
     def _defaultMergeRequestFn(self, req1, req2):
