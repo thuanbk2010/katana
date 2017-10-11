@@ -77,6 +77,9 @@ class BuildRequest(object):
     @ivar id: build request ID
 
     @ivar bsid: ID of the parent buildset
+
+    @ivar isMergingWithPrevious: automatic calculated property that is True
+    only during merge request for FindPreviousSuccessBuild and CheckArtifactExists
     """
 
     source = None
@@ -85,6 +88,7 @@ class BuildRequest(object):
     brdict = None
     checkMerges = True
     hasBeenMerged = False
+    isMergingWithPrevious = False
     retries = 0
 
     @classmethod

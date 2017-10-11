@@ -86,9 +86,13 @@ class FindPreviousSuccessBuildMixin():
                 buildSetsProperties = yield master.db.buildsets.getBuildsetsProperties(buildSetIds)
                 for prevBuildRequest in prevBuildRequests:
                     req2 = self._getBuildRequest(master, prevBuildRequest, buildSets, buildSetsProperties, req1.sources)
-                    if (mergeRequestFn(build.builder, req1, req2)):
-                        log.msg("[brid: %d] previous successful build [%s] found with matching properties" % (build.requests[0].id, prevBuildRequest['brid']))
-                        defer.returnValue((PreviousBuildStatus.Found, prevBuildRequest))
+                    req1.isMergingWithPrevious = req2.isMergingWithPrevious = True
+                    try:
+                        if (mergeRequestFn(build.builder, req1, req2)):
+                            log.msg("[brid: %d] previous successful build [%s] found with matching properties" % (build.requests[0].id, prevBuildRequest['brid']))
+                            defer.returnValue((PreviousBuildStatus.Found, prevBuildRequest))
+                    finally:
+                        req1.isMergingWithPrevious = req2.isMergingWithPrevious = False
                 log.msg("[brid: %d] found %d previous successful builds , but merge function did not match" % (build.requests[0].id, len(prevBuildRequests)))
 
         log.msg("[brid: %d] found no previous successful builds" % build.requests[0].id)

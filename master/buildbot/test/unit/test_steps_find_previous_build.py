@@ -167,6 +167,20 @@ class TestFindPreviousSuccessfulBuild(steps.BuildStepMixin, config.ConfigErrorsM
         self.expectURLS({'A #1': 'baseurl/builders/A/builds/1?c_branch=master'})
         return self.runStep()
 
+    def test_previous_build_exists_when_is_mergin_with_previous_is_true_then_then_previous_success_build_is_found(self):
+        def isMergingWithPrevious(builder, req1, req2):
+            return req1.isMergingWithPrevious and req2.isMergingWithPrevious
+        self.setupStep(artifact.FindPreviousSuccessfulBuild(),
+                       sourcestampsInBuild = [FakeSourceStamp(codebase='c',
+                                                              repository='https://url/project',
+                                                              branch='master',
+                                                              revision=12, sourcestampsetid=2)],
+                       configuredMergeFnResponse=isMergingWithPrevious)
+
+        self.expectOutcome(result=SUCCESS, status_text=['Found previous successful build.'])
+        self.expectURLS({'A #1': 'baseurl/builders/A/builds/1?c_branch=master'})
+        return self.runStep()
+
     def test_force_rebuild(self):
         self.setupStep(artifact.FindPreviousSuccessfulBuild(),
                        sourcestampsInBuild = [FakeSourceStamp(codebase='c',
@@ -349,4 +363,30 @@ class TestFindPreviousSuccessfulBuild(steps.BuildStepMixin, config.ConfigErrorsM
                                                               revision=12, sourcestampsetid=2)],
                        configuredMergeFnResponse=cannotMerge)
         self.expectOutcome(result=SUCCESS, status_text=['Artifact not found.'])
+        return self.runStep()
+
+    def test_checkartifact_when_is_mergin_with_previous_is_true_then_artifact_found(self):
+        def isMergingWithPrevious(builder, req1, req2):
+            return req1.isMergingWithPrevious and req2.isMergingWithPrevious
+        self.setupStep(artifact.CheckArtifactExists(artifact="myartifact.py", artifactDirectory="artifact",
+                                        artifactServer='usr@srv.com', artifactServerDir='/home/srv/web/dir',
+                                        artifactServerURL="http://srv.com/dir"),
+                       sourcestampsInBuild = [FakeSourceStamp(codebase='c',
+                                                              repository='https://url/project',
+                                                              branch='master',
+                                                              revision=12, sourcestampsetid=2)],
+                       configuredMergeFnResponse=isMergingWithPrevious)
+        self.expectCommands(
+            ExpectShell(workdir='wkdir', usePTY='slave-config',
+                        command= ['ssh',
+              'usr@srv.com',
+              'cd /home/srv/web/dir;',
+              "if [ -d build_1_01_01_1970_00_00_00_+0000/artifact ]; then echo 'Exists'; else echo 'Not found!!'; fi;",
+              'cd build_1_01_01_1970_00_00_00_+0000/artifact',
+              '; ls myartifact.py',
+              '; ls'])
+            + ExpectShell.log('stdio', stdout='myartifact.py')
+            + 0
+        )
+        self.expectOutcome(result=SUCCESS, status_text=['Searching complete.'])
         return self.runStep()
