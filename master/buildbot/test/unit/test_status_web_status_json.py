@@ -165,7 +165,7 @@ class TestBuildJsonResource(unittest.TestCase):
                               {'description': 'buildtag2desc', 'title': 'buildtag2'},
                           ],
                           'url':
-                              {'path': 'http://localhost:8080/builders/builder-01/builds/1' +
+                              {'path': 'http://localhost:8080/projects/Katana/builders/builder-01/builds/1' +
                                        '?katana-buildbot_branch=katana&_branch=b', 'text': 'builder-01 #1'},
                           'text': [], 'sourceStamps': [{'codebase': '', 'revision_short': 'abcdef123456',
                                                         'totalChanges': 0,
@@ -297,7 +297,7 @@ class TestPastBuildsJsonResource(unittest.TestCase):
                     'text': [], 'times': (1422441500, 1422441501.21),
                     'url': {
                         'path':
-                            'http://localhost:8080/builders/builder-01/builds/%d?katana-buildbot_branch=katana' % num,
+                            'http://localhost:8080/projects/Katana/builders/builder-01/builds/%d?katana-buildbot_branch=katana' % num,
                         'text': 'builder-01 #%d' % num}}
 
         for b in builds_dict:
