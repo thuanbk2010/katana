@@ -117,7 +117,8 @@ define(function (require) {
                         if (typeof build.url === "object") {
                             build = $.extend({}, build, {url: build.url.path});
                         }
-                        return hb.partials.cells["cells:buildStatus"](build);
+
+                        return hb.partials.cells["cells:buildStatus"]({url: build.url, number: build.number, text: build.text, build_tags: build.build_tags});
                     }
 
                     return "";

@@ -67,32 +67,39 @@
 
 {{#buildResults}}
     {{#unless buildIsFinished}}
-      <h2 class="head-2">
-        Build In Progress
-      </h2>
+        <h2 class="head-2">
+            Build In Progress
+        </h2>
 
         {{#if b.currentStep}}
-        <span class="current-step current-step-js result">
-         {{ b.currentStep.name }}
-        </span>
-        {{{progressBar}}}
+            <span class="current-step current-step-js result">
+                {{ b.currentStep.name }}
+            </span>
+            {{{progressBar}}}
         {{else}}
-
-        {{#if b.results }}
-         <span class="{{buildCSSClass b.results }} result overall-result-js overall-result">
-          {{#each b.text}}{{this}} {{/each}}
-        </span>
-        {{/if }}
+            {{#if b.results }}
+                <span class="{{buildCSSClass b.results }} result overall-result-js overall-result">
+                    {{#each b.text}}{{this}} {{/each}}
+                </span>
+            {{/if}}
         {{/if}}
 
     {{else}}
-      <h2 id="isFinished" data-isfinished="true" class="head-2">
-        Results
-      </h2>
+        <h2 id="isFinished" data-isfinished="true" class="head-2">
+          Results
+        </h2>
 
-      <span class="{{buildCSSClass b.results }} result overall-result-js overall-result">
-          {{#each b.text}}{{this}} {{/each}}
-      </span>
+        <span class="{{buildCSSClass b.results }} result overall-result-js overall-result">
+            {{#each b.text}}{{this}} {{/each}}
+        </span>
     {{/unless}}
+
+    {{#if b.build_tags.length}}
+        <div>
+            {{#each b.build_tags}}
+                <span class="label label-warning" title="{{this.description}}">{{this.title}}</span>
+            {{/each}}
+        </div>
+    {{/if}}
 
 {{/buildResults}}

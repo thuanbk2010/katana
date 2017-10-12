@@ -26,6 +26,7 @@ from twisted.internet import defer
 from buildbot.status.results import SUCCESS
 from buildbot.config import BuilderConfig
 from buildbot.process.factory import BuildFactory
+from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildrequest import BuildRequestStatus
 from buildbot.sourcestamp import SourceStamp
 from buildbot.process.properties import Properties
@@ -78,12 +79,16 @@ def setUpProject():
 
 
 def mockBuilder(master, master_status, buildername, proj):
+    def CalculatedBuildTag(properties):
+        return BuildTag('buildtag1')
     builder = mock.Mock()
     builder.config = BuilderConfig(name=buildername, friendly_name=buildername,
                                    project=proj,
                                    slavenames=['build-slave-01'],
                                    factory=BuildFactory(), description="Describing my builder",
-                                   slavebuilddir="test", tags=['tag1', 'tag2'])
+                                   slavebuilddir="test",
+                                   tags=['tag1', 'tag2'],
+                                   build_tags=[CalculatedBuildTag, BuildTag('buildtag2', 'buildtag2desc')])
     builder.builder_status = BuilderStatus(buildername, None, master, description="Describing my builder")
     builder.builder_status.setSlavenames(['build-slave-01'])
     builder.builder_status.setTags(['tag1', 'tag2'])
@@ -93,6 +98,8 @@ def mockBuilder(master, master_status, buildername, proj):
     builder.builder_status.nextBuildNumber = 1
     builder.builder_status.basedir = '/basedir'
     builder.builder_status.saveYourself = lambda skipBuilds=True: True
+
+    master.botmaster.builders[buildername] = builder
 
     return builder
 
@@ -124,6 +131,7 @@ def fakeBuildStatus(master, builder, num):
 
 class TestBuildJsonResource(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = 6000
         self.project = setUpProject()
 
         self.master = setUpFakeMasterWithProjects(self.project, self)
@@ -152,8 +160,12 @@ class TestBuildJsonResource(unittest.TestCase):
                          {'results_text': 'success', 'slave': 'build-slave-01',
                           'slave_url': None, 'builderName': 'builder-01',
                           'builder_tags': ['tag1', 'tag2'],
+                          'build_tags': [
+                              {'description': 'buildtag1', 'title': 'buildtag1'},
+                              {'description': 'buildtag2desc', 'title': 'buildtag2'},
+                          ],
                           'url':
-                              {'path': 'http://localhost:8080/builders/builder-01/builds/1' +
+                              {'path': 'http://localhost:8080/projects/Katana/builders/builder-01/builds/1' +
                                        '?katana-buildbot_branch=katana&_branch=b', 'text': 'builder-01 #1'},
                           'text': [], 'sourceStamps': [{'codebase': '', 'revision_short': 'abcdef123456',
                                                         'totalChanges': 0,
@@ -229,6 +241,7 @@ class TestBuilderSlavesJsonResources(unittest.TestCase):
 
 class TestPastBuildsJsonResource(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = 6000
         self.project = setUpProject()
 
         self.master = setUpFakeMasterWithProjects(self.project, self)
@@ -268,6 +281,10 @@ class TestPastBuildsJsonResource(unittest.TestCase):
 
         def expectedDict(num):
             return {'artifacts': None, 'blame': [], 'builderFriendlyName': 'builder-01', 'builderName': 'builder-01', 'builder_tags': ['tag1', 'tag2'],
+                    'build_tags': [
+                        {'description': 'buildtag1', 'title': 'buildtag1'},
+                        {'description': 'buildtag2desc', 'title': 'buildtag2'},
+                    ],
                     'builder_url': 'http://localhost:8080/projects/Katana/builders/builder-01?katana-buildbot_branch=katana',
                     'currentStep': None, 'eta': None, 'failure_url': None, 'isWaiting': False, 'logs': [],
                     'number': num, 'properties': [], 'reason': 'A build was forced by user@localhost',
@@ -280,7 +297,7 @@ class TestPastBuildsJsonResource(unittest.TestCase):
                     'text': [], 'times': (1422441500, 1422441501.21),
                     'url': {
                         'path':
-                            'http://localhost:8080/builders/builder-01/builds/%d?katana-buildbot_branch=katana' % num,
+                            'http://localhost:8080/projects/Katana/builders/builder-01/builds/%d?katana-buildbot_branch=katana' % num,
                         'text': 'builder-01 #%d' % num}}
 
         for b in builds_dict:
@@ -289,6 +306,7 @@ class TestPastBuildsJsonResource(unittest.TestCase):
 
 class TestSingleProjectJsonResource(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = 6000
         self.project = setUpProject()
 
         self.master = setUpFakeMasterWithProjects(self.project, self)
@@ -463,6 +481,10 @@ class TestSingleProjectJsonResource(unittest.TestCase):
                      'slave_url': None,
                      'builderName': 'builder-01',
                      'builder_tags': ['tag1', 'tag2'],
+                     'build_tags': [
+                         {'description': 'buildtag1', 'title': 'buildtag1'},
+                         {'description': 'buildtag2desc', 'title': 'buildtag2'},
+                     ],
                      'url':
                          {'path':
                               'http://localhost:8080/projects/Katana/builders/builder-01' +

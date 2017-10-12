@@ -23,11 +23,13 @@ from twisted.persisted import styles
 from twisted.internet import reactor, defer, threads
 from buildbot import interfaces, util, sourcestamp
 from buildbot.process import properties
+from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildstep import BuildStepStatus
 from buildbot.status.results import SUCCESS, NOT_REBUILT, SKIPPED, RESUME, CANCELED, RETRY, MERGED
 import time
 
 # Avoid doing an import since it creates circular reference
+
 TriggerType = "<class 'buildbot.steps.trigger.Trigger'>"
 AcquireBuildLocksType = "<class 'buildbot.steps.artifact.AcquireBuildLocks'>"
 
@@ -629,6 +631,23 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
                 self.artifacts = artifacts
             return self.artifacts
 
+    def getBuildTags(self):
+        build_tags = []
+        builder = self.master.botmaster.builders.get(self.builder.name)
+        if not builder:
+            return build_tags
+        config = builder.config
+        if not config.build_tags:
+            return build_tags
+        for build_tag in config.build_tags:
+            if callable(build_tag):
+                build_tag = build_tag(self.properties)
+            if not build_tag:
+                continue
+            if isinstance(build_tag, BuildTag):
+                build_tags.append(build_tag.asDict())
+        return build_tags
+
     def asBaseDict(self, request=None, include_current_step=False, include_artifacts=False, include_failure_url=False):
         from buildbot.status.web.base import getCodebasesArg
 
@@ -651,6 +670,7 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
         result['url']['path'] += args
         result['builder_url'] = status.getURLForThing(self.builder) + args
         result['builder_tags'] = self.builder.tags
+        result['build_tags'] = self.getBuildTags()
 
         if self.resume:
             result['resume'] = self.resume
