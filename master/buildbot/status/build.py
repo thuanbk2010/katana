@@ -633,7 +633,7 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
 
     def getBuildTags(self):
         build_tags = []
-        builder = self.master.botmaster.builders[self.builder.name]
+        builder = self.master.botmaster.builders.get(self.builder.name)
         if not builder:
             return build_tags
         config = builder.config
