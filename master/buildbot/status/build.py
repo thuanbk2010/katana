@@ -23,12 +23,12 @@ from twisted.persisted import styles
 from twisted.internet import reactor, defer, threads
 from buildbot import interfaces, util, sourcestamp
 from buildbot.process import properties
+from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildstep import BuildStepStatus
 from buildbot.status.results import SUCCESS, NOT_REBUILT, SKIPPED, RESUME, CANCELED, RETRY, MERGED
 import time
 
 # Avoid doing an import since it creates circular reference
-from process.buildtag import BuildTag
 
 TriggerType = "<class 'buildbot.steps.trigger.Trigger'>"
 AcquireBuildLocksType = "<class 'buildbot.steps.artifact.AcquireBuildLocks'>"

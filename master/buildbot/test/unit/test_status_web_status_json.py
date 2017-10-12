@@ -26,12 +26,10 @@ from twisted.internet import defer
 from buildbot.status.results import SUCCESS
 from buildbot.config import BuilderConfig
 from buildbot.process.factory import BuildFactory
+from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildrequest import BuildRequestStatus
 from buildbot.sourcestamp import SourceStamp
 from buildbot.process.properties import Properties
-
-from process.buildtag import BuildTag
-
 
 class PastBuildsJsonResource(unittest.TestCase):
     def setUp(self):
