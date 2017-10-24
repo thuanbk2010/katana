@@ -653,8 +653,6 @@ class RunProcess:
         while self.buffered:
             # Grab the next bits from the buffer
             logname, data, time = self.buffered.popleft()
-            self.builder.saveCommandOutputToLog(data, time)
-
 
             # exclude saving the output from custom logfiles/artifacts
             is_custom_log = isinstance(logname, tuple) and 'log' in logname  # exclude custom configured files
