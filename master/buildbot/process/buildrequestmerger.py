@@ -2,11 +2,11 @@ import json
 import time
 
 from twisted.application import service
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python import log
 
 from buildbot import config
-from buildbot.util.lru import LRUCache
+from buildbot.util.lru import LRUCache, AsyncLRUCache
 
 
 class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
@@ -24,13 +24,14 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
 
     def __init__(self, master):
         self.master = master
-        self.startbrid_cache = LRUCache(
+        self.startbrid_cache = AsyncLRUCache(
             miss_fn=self.master.db.buildrequests.getTopLevelChainBrid,
             max_size=20000)
-        self.properties_cache = LRUCache(
+        self.properties_cache = AsyncLRUCache(
             miss_fn=None,  # Cache contents are handled manually
             max_size=20000)
 
+    @defer.inlineCallbacks
     def addBuildset(self,
                     sourcestampsetid,
                     reason,
@@ -64,13 +65,13 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                 mergeBrid = None
             else:
                 # If we are not the top level build, find this chain's top level build
-                startbrid = self.startbrid_cache.get(triggeredbybrid)
+                startbrid = yield self.startbrid_cache.get(triggeredbybrid)
 
                 # And look for a builder that matches the configured properties
                 mergeProperties = self.master.botmaster.builders[
                     builderName].config.mergeProperties
-                mergeBrid = self._getMergeBrid(startbrid, builderName,
-                                               properties, mergeProperties)
+                mergeBrid = yield self._getMergeBrid(
+                    startbrid, builderName, properties, mergeProperties)
 
                 # If we found one, add it to our merge map
                 if mergeBrid:
@@ -85,7 +86,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
 
         log.msg(json.dumps(buildsetLog))
 
-        return self.master.db.buildsets.addBuildset(
+        result = yield self.master.db.buildsets.addBuildset(
             sourcestampsetid=sourcestampsetid,
             reason=reason,
             properties=properties,
@@ -94,7 +95,9 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             breqsToMerge=breqsToMerge,
             external_idstring=external_idstring,
             _reactor=_reactor, )
+        defer.returnValue(result)
 
+    @defer.inlineCallbacks
     def _getMergeBrid(self, startbrid, builderName, properties,
                       mergeProperties):
         """
@@ -113,14 +116,15 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         # This might happen when a user wants to test the same build in different
         # slaves to look for instabilities
         if 'selected_slave' in properties:
-            return None
+            defer.returnValue(None)
+            return
 
         # Get an initial list of all breqs of the same name, in the same chain
-        matchingBreqs = self.master.db.buildrequests.getMergeTargetsInChain(
+        matchingBreqs = yield self.master.db.buildrequests.getMergeTargetsInChain(
             startbrid, builderName)
 
         # Get properties for matching breqs (done in a single queyr for optimization)
-        otherProperties = self._getBuildsetsProperties(
+        otherProperties = yield self._getBuildsetsProperties(
             [bsid for bsid, _brid in matchingBreqs])
 
         # Check if relevant properties match
@@ -130,10 +134,11 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                                      mergeProperties):
 
                 # If they match, merge against this buildrequest
-                return otherBrid
+                defer.returnValue(otherBrid)
+                return
 
         # If we can't find any match, return None
-        return None
+        defer.returnValue(None)
 
     def _propertiesMatch(self, properties, otherProperties, mergeProperties):
         """
@@ -155,23 +160,25 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
 
         return True
 
+    @defer.inlineCallbacks
     def _getBuildsetsProperties(self, buildsetids):
         properties = {}
 
         # Fill in properties from cache
         for buildsetid in buildsetids:
             if buildsetid in self.properties_cache.cache:
-                properties[buildsetid] = self.properties_cache.get(buildsetid)
+                properties[buildsetid] = yield self.properties_cache.get(
+                    buildsetid)
 
         # Read missing properties in a single query
         missing_buildsetids = set(buildsetids).difference(properties.keys())
         if missing_buildsetids:
-            properties.update(
-                self.master.db.buildsets.getBuildsetsProperties(
-                    missing_buildsetids))
+            db_properties = yield self.master.db.buildsets.getBuildsetsProperties(
+                missing_buildsetids)
+            properties.update(db_properties)
 
         # Populate cache with new values
         for buildsetid in missing_buildsetids:
             self.properties_cache.put_new(buildsetid, properties[buildsetid])
 
-        return properties
+        defer.returnValue(properties)

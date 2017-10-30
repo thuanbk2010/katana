@@ -209,14 +209,7 @@ class AsyncLRUCache(LRUCache):
 
         def handle_result(result):
             if result is not None:
-                self.cache[key] = result
-                self.weakrefs[key] = result
-
-                # reference the key once, possibly standing in for multiple
-                # concurrent accesses
-                self._ref_key(key)
-
-                self._purge()
+                self.put_new(key, result)
 
             # and fire all of the waiting Deferreds
             dlist = concurrent.pop(key)
