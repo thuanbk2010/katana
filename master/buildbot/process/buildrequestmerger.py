@@ -43,8 +43,9 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         ..seealso:: buildsets.addBuildset
             For parameter details
         """
-        start = time.time()
+        builderNames = sorted(builderNames)
 
+        start = time.time()
         buildsetLog = {
             'name': 'addBuildset',
             'description':
