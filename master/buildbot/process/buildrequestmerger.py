@@ -1,11 +1,9 @@
 import json
 import time
-from collections import defaultdict
 
 from twisted.application import service
 from twisted.internet import reactor
 from twisted.python import log
-import sqlalchemy as sa
 
 from buildbot import config
 from buildbot.util.lru import LRUCache
@@ -27,7 +25,8 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
     def __init__(self, master):
         self.master = master
         self.startbrid_cache = LRUCache(
-            miss_fn=self.__startbridCacheMissFn, max_size=20000)
+            miss_fn=self.master.db.buildrequests.getTopLevelChainBrid,
+            max_size=20000)
         self.properties_cache = LRUCache(
             miss_fn=None,  # Cache contents are handled manually
             max_size=20000)
@@ -116,7 +115,8 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             return None
 
         # Get an initial list of all breqs of the same name, in the same chain
-        matchingBreqs = self._getSameBuildersInChain(startbrid, builderName)
+        matchingBreqs = self.master.db.buildrequests.getMergeTargetsInChain(
+            startbrid, builderName)
 
         # Get properties for matching breqs (done in a single queyr for optimization)
         otherProperties = self._getBuildsetsProperties(
@@ -133,37 +133,6 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
 
         # If we can't find any match, return None
         return None
-
-    def _getSameBuildersInChain(self, startbrid, builderName):
-        """
-        :param str startbrid:
-        :param str builderName:
-        :return tuple(str,str):
-            (buildsetid, brid) for all buildrequests in the same chain (`startbrid`)
-            with the same `builderName`
-        """
-        breq_tbl = self.master.db.model.buildrequests
-
-        def __getSameBuildersInChain(conn):
-            # Select buildrequests `buildsetit` and `brid`
-            # q = sa.select(breq_tbl.c.buildsetid, breq_tbl.c.id) \
-
-            # For builders in the same chain
-            #     .where(breq_tbl.c.startbrid == startbrid) \
-
-            # With the same name
-            #     .where(breq_tbl.c.buildername == builderName) \
-
-            # That were not merged themselves (only merge against one / main target)
-            #     .where(breq_tbl.c.mergebrid == None) \
-            q = sa.select(breq_tbl.c.buildsetid, breq_tbl.c.id) \
-                .where(breq_tbl.c.startbrid == startbrid) \
-                .where(breq_tbl.c.buildername == builderName) \
-                .where(breq_tbl.c.mergebrid == None)
-            res = conn.execute(q)
-            return res.fetchall() or []
-
-        return self.master.db.pool.do(__getSameBuildersInChain)
 
     def _propertiesMatch(self, properties, otherProperties, mergeProperties):
         """
@@ -196,51 +165,12 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         # Read missing properties in a single query
         missing_buildsetids = set(buildsetids).difference(properties.keys())
         if missing_buildsetids:
-            prop_tbl = self.master.db.model.buildset_properties
-
-            def __getBuildsetsProperties(conn):
-                q = sa.select(prop_tbl.c.buildsetid, prop_tbl.c.property_name, prop_tbl.c.property_value) \
-                    .where(prop_tbl.c.buildsetid.in_(missing_buildsetids))
-                res = conn.execute(q)
-
-                missing_properties = {
-                    buildsetid: {}
-                    for buildsetid in missing_buildsetids
-                }
-                for (buildsetid, property_name, property_value) in (
-                        res.fetchall() or []):
-                    missing_properties[buildsetid][
-                        property_name] = property_value
-
-                # Return properties
-                return missing_properties
-
-            properties.update(self.master.db.pool.do(__getBuildsetsProperties))
+            properties.update(
+                self.master.db.buildsets.getBuildsetsProperties(
+                    missing_buildsetids))
 
         # Populate cache with new values
         for buildsetid in missing_buildsetids:
             self.properties_cache.put_new(buildsetid, properties[buildsetid])
 
         return properties
-
-    def __startbridCacheMissFn(self, brid):
-        """
-        Given a build request id `brid`, find the top level build that started
-        the chain containing it.
-
-        :param str brid:
-        :return str:
-            Build request id
-        """
-        breq_tbl = self.master.db.model.buildrequests
-
-        def __getStartbrid(conn):
-            q = sa.select(breq_tbl.c.startbrid) \
-                .where(breq_tbl.c.id == brid)
-
-            startbrid = conn.execute(q).fetchone().startbrid
-
-            # If startbrid is None, then `brid` IS the chain's top level build
-            return startbrid or brid
-
-        return self.master.db.pool.do(__getStartbrid)
