@@ -97,7 +97,7 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
                                         claimed_by_incarnation=None, complete=0, results=-1,
                                         submitted_at=submitted_at, complete_at=None,
                                         triggeredbybrid=triggeredbybrid, startbrid=startbrid,
-                                        mergeBrid=breqsToMerge.get(buildername, None)))
+                                        mergebrid=breqsToMerge.get(buildername, None)))
 
                 brids[buildername] = res.inserted_primary_key[0]
 

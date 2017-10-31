@@ -111,6 +111,36 @@ class SourceStampsConnectorComponent(base.DBConnectorComponent):
             sslist.append(sourcestamp)
         defer.returnValue(sslist)
 
+    def getSimpleSourceStamps(self, sourcestampsetid):
+        """
+        :param sourcestampsetid:
+        :return list(dict):
+            A dictionary of sourcestamps in the same format expected by
+            `buildrequests.getBuildRequests`:
+
+            {
+                'b_codebase': row.codebase,
+                'b_revision': row.revision,
+                'b_branch': row.branch,
+                'b_sourcestampsetid': sourcestampsetid
+            }
+        """
+
+        def thd(conn):
+            tbl = self.db.model.sourcestamps
+            q = sa.select([tbl.c.codebase, tbl.c.branch, tbl.c.revision],
+                   whereclause=(tbl.c.sourcestampsetid == sourcestampsetid))
+            res = conn.execute(q)
+
+            sourcestamps = [{
+                'b_codebase': row.codebase,
+                'b_revision': row.revision,
+                'b_branch': row.branch,
+                'b_sourcestampsetid': sourcestampsetid
+            } for row in res.fetchall()]
+            return sourcestamps
+        return self.db.pool.do(thd)
+
     @base.cached("ssdicts")
     def getSourceStamp(self, ssid):
         def thd(conn):
