@@ -31,9 +31,10 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
     # Documentation is in developer/database.rst
 
     def addBuildset(self, sourcestampsetid, reason, properties, triggeredbybrid=None,
-                    builderNames=None, external_idstring=None, _reactor=reactor, breqsToMerge=None):
-        if breqsToMerge is None:
-            breqsToMerge = {}
+                    builderNames=None, external_idstring=None, brDictsToMerge=None,
+                    _reactor=reactor, _master_objectid=None):
+        if brDictsToMerge is None:
+            brDictsToMerge = {}
 
         def thd(conn):
             priority = Priority.Default
@@ -91,15 +92,40 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
             ins = br_tbl.insert()
             for buildername in builderNames:
                 self.check_length(br_tbl.c.buildername, buildername)
+
+                # If this builder is being merged, figure out what to merge into
+                mergeBrDict = brDictsToMerge.get(buildername, None)
+                if mergeBrDict:
+                    mergebrid = artifactbrid = brDictsToMerge[buildername]['brid']
+                else:
+                    mergebrid = artifactbrid = None
+
+                # Add the buildrequest to the database
                 res = conn.execute(ins,
                                    dict(buildsetid=bsid, buildername=buildername, priority=priority,
-                                        claimed_at=0, claimed_by_name=None,
-                                        claimed_by_incarnation=None, complete=0, results=-1,
+                                        complete=0, results=-1,
                                         submitted_at=submitted_at, complete_at=None,
                                         triggeredbybrid=triggeredbybrid, startbrid=startbrid,
-                                        mergebrid=breqsToMerge.get(buildername, None)))
-
+                                        mergebrid=mergebrid, artifactbrid=artifactbrid))
                 brids[buildername] = res.inserted_primary_key[0]
+
+            # Do the rest of the merge process for merged builds
+            if brDictsToMerge:
+                current_time = _reactor.seconds()
+
+                # Register breq as claimed
+                q = self.db.model.buildrequest_claims.insert()
+                conn.execute(q, [dict(brid=brids[buildername], objectid=_master_objectid,
+                                      claimed_at=current_time)
+                                 for (buildername, _mergeBrDict) in brDictsToMerge.iteritems()])
+
+                # If we are merging against a running request, register a build for this breq
+                q = self.db.model.builds.insert()
+                conn.execute(q, [dict(number=mergeBrDict['build_number'], brid=brids[buildername],
+                                      start_time=current_time, finish_time=None)
+                                 for (buildername, mergeBrDict) in brDictsToMerge.iteritems()
+                                 if mergeBrDict['build_number']
+                             ])
 
             transaction.commit()
 

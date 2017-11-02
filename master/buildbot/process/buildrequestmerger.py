@@ -18,13 +18,6 @@ class PropertiesDict(dict):
 
 
 class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
-    """
-    Wrapper around buildsets.addBuildset that does merging before
-    buildrequests hit the db.
-
-    This will only do merges within a same buildchain, and will never merge
-    the top level build.
-    """
 
     # Basic list of properties that must match for a buildrequest to be merged
     # BuilderConfigs can define additional properties (see _propertiesMatch)
@@ -46,6 +39,12 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                     external_idstring=None,
                     _reactor=reactor):
         """
+        Wrapper around buildsets.addBuildset that does merging before
+        buildrequests hit the db.
+
+        ..seealso:: self._getMergeBrDict
+            For more documentation on merge conditions
+
         ..seealso:: buildsets.addBuildset
             For parameter details
         """
@@ -60,7 +59,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             'builderNames': builderNames,
         }
         # For every builderName in this buildset, check which ones can be merged
-        breqsToMerge = {}
+        brDictsToMerge = {}
 
         # Don't read sourcestamp information yet, since we might not need it
         sourcestamps = None
@@ -72,7 +71,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                 # Never merge if a build request has a selected_slave
                 # This might happen when a user wants to test the same build in different
                 # slaves to look for instabilities
-                mergeBrid = None
+                mergeBrDict = None
             else:
                 # Look for a builder that matches the configured properties
                 mergeProperties = self.master.botmaster.builders[
@@ -83,62 +82,77 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                     sourcestamps = yield self.master.db.sourcestamps.getSimpleSourceStamps(
                         sourcestampsetid)
 
-                mergeBrid = yield self._getMergeBrid(
+                mergeBrDict = yield self._getMergeBrDict(
                     builderName, sourcestamps, properties, mergeProperties)
 
             # If we found one, add it to our merge map
-            if mergeBrid:
-                breqsToMerge[builderName] = mergeBrid
+            if mergeBrDict:
+                brDictsToMerge[builderName] = mergeBrDict
 
             buildsetLog[builderName] = {
                 'elapsed': time.time() - builderMergeStart,
-                'mergeBrid': mergeBrid
+                'mergeBrid':
+                brDictsToMerge.get(builderName, {}).get('brid', None)
             }
 
         buildsetLog['elapsed'] = time.time() - start
 
         log.msg(json.dumps(buildsetLog))
 
+        # Finally add the buildset passing the map of `brDictsToMerge`
+        # This method will make sure that all new breqs will enter the db
+        # marked as merged, and will not run.
+        _master_objectid = yield self.master.getObjectId()
         result = yield self.master.db.buildsets.addBuildset(
             sourcestampsetid=sourcestampsetid,
             reason=reason,
             properties=properties,
             triggeredbybrid=triggeredbybrid,
             builderNames=builderNames,
-            breqsToMerge=breqsToMerge,
+            brDictsToMerge=brDictsToMerge,
             external_idstring=external_idstring,
-            _reactor=_reactor, )
+            _reactor=_reactor,
+            _master_objectid=_master_objectid)
         defer.returnValue(result)
 
     @defer.inlineCallbacks
-    def _getMergeBrid(self, builderName, sourcestamps, properties,
-                      mergeProperties):
+    def _getMergeBrDict(self, builderName, sourcestamps, properties,
+                        mergeProperties):
         """
-        :return str or None:
-            Build request id for a request that can be merged into (matches
-            buiderName, properties and sourcestamp information).
+        Looks for a buildrequest we can merge into.
 
+        It must match `builderName`, `sourcestamps` and all properties defined
+        in `mergeProperties`.
+
+        This will only merge against builds that have already been claimed
+        and are currently running (unfinished builds).
+
+        :return BrDict or None:
+            Buildrequest dictionary for a request that can be merged into.
             `None` if no match was found.
         """
-        # Get an initial list of all breqs of the same name, in the same chain
-        matchingBrdicts = yield self.master.db.buildrequests.getBuildRequests(
+        matchingBrDicts = yield self.master.db.buildrequests.getBuildRequests(
             buildername=builderName,
             complete=False,
+            claimed=True,
             sourcestamps=sourcestamps,
             mergebrids="exclude")
 
         # Get properties for matching breqs (done in a single query for optimization)
         otherProperties = yield self._getBuildsetsProperties(
-            [brdict['buildsetid'] for brdict in matchingBrdicts])
+            [brdict['buildsetid'] for brdict in matchingBrDicts])
 
         # Check if relevant properties match
-        for brdict in matchingBrdicts:
+        for brdict in matchingBrDicts:
             if self._propertiesMatch(properties,
                                      otherProperties[brdict['buildsetid']],
                                      mergeProperties):
 
-                # If they match, merge against this buildrequest
-                defer.returnValue(brdict['brid'])
+                # If they match, fetch the build number and merge against this buildrequest
+                brdict[
+                    'build_number'] = yield self.master.db.builds.getBuildNumberForRequest(
+                        brdict['brid'])
+                defer.returnValue(brdict)
                 return
 
         # If we can't find any match, return None
