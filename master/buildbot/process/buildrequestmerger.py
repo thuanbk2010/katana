@@ -95,9 +95,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                 brDictsToMerge.get(builderName, {}).get('brid', None)
             }
 
-        buildsetLog['elapsed'] = time.time() - start
-
-        log.msg(json.dumps(buildsetLog))
+        buildsetLog['elapsed_merge'] = time.time() - start
 
         # Finally add the buildset passing the map of `brDictsToMerge`
         # This method will make sure that all new breqs will enter the db
@@ -113,6 +111,15 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             external_idstring=external_idstring,
             _reactor=_reactor,
             _master_objectid=_master_objectid)
+
+        # Log more ids
+        (bsid, brids) = result
+        buildsetLog['buildsetid'] = bsid
+        for builderName, brid in brids.iteritems():
+            buildsetLog[builderName]['brid'] = brid
+        buildsetLog['elapsed_total'] = time.time() - start
+        log.msg(json.dumps(buildsetLog))
+
         defer.returnValue(result)
 
     @defer.inlineCallbacks
