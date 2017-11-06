@@ -96,7 +96,12 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
                 # If this builder is being merged, figure out what to merge into
                 mergeBrDict = brDictsToMerge.get(buildername, None)
                 if mergeBrDict:
+                    # Set our merge target
                     mergebrid = brDictsToMerge[buildername]['brid']
+
+                    # And reuse artifacts. `artifactbrid` and `mergebrid` will almost
+                    # always be the same, except for cases where we are merging against
+                    # a build that reused previous artifacts
                     artifactbrid = brDictsToMerge[buildername]['artifactbrid'] or mergebrid
                 else:
                     mergebrid = artifactbrid = None

@@ -29,6 +29,7 @@ from buildbot import util
 from buildbot.util import lru
 
 import random
+import time
 
 def timerLogFinished(msg, timer):
     finished = util.now(timer._reactor)
@@ -619,6 +620,15 @@ class KatanaBuildChooser(BasicBuildChooser):
 
     @defer.inlineCallbacks
     def mergeRequests(self, breq, queue, startbrid=None):
+        start = time.time()
+        mergeRequestsLog = {
+            'name': 'mergeRequests',
+            'description': 'Merges buildrequests of identical sourcestamps',
+            'brid': breq.id,
+            'queue': queue,
+            'startbrid': startbrid,
+        }
+
         mergedRequests = [breq]
 
         sourcestamps = []
@@ -632,11 +642,18 @@ class KatanaBuildChooser(BasicBuildChooser):
                                                                              startbrid=startbrid,
                                                                              order=False)
 
+        mergeRequestsLog['elapsedQuery']=  time.time() - start
+        mergeRequestsFnStart = time.time()
+
         for brdict in brdicts:
             req = yield self._getBuildRequestForBrdict(brdict)
             canMerge = self.mergeRequestsFn(self.bldr, breq, req)
             if canMerge and req.id != breq.id:
                 mergedRequests.append(req)
+
+        mergeRequestsLog['elapsedmergeRequestsFn'] = time.time() - mergeRequestsFnStart
+        mergeRequestsLog['mergedRequests'] = [mr.id for mr in mergedRequests]
+        mergeRequestsLog['elapsed'] = time.time() - start
 
         defer.returnValue(mergedRequests)
 
