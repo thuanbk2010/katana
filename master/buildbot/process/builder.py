@@ -537,19 +537,26 @@ class Builder(config.ReconfigurableServiceMixin,
                         self.config.properties[propertyname],
                         "Builder")
 
+    @defer.inlineCallbacks
     def buildFinished(self, build, sb, bids):
-        """This is called when the Build has finished (either success or
+        """
+        This is called when the Build has finished (either success or
         failure). Any exceptions during the build are reported with
-        results=FAILURE, not with an errback."""
+        results=FAILURE, not with an errback.
 
-        # by the time we get here, the Build has already released the slave,
-        # which will trigger a check for any now-possible build requests
-        # (maybeStartBuilds)
+        By the time we get here, the Build has already released the slave,
+        which will trigger a check for any now-possible build requests
+        (maybeStartBuilds)
+        """
+        # List all known build requests tied to this `build`
+        brids = {br.id for br in build.requests}
 
-        # mark the builds as finished, although since nothing ever reads this
-        # table, it's not too important that it complete successfully
-        brids = [br.id for br in build.requests]
-        d = self.finishBuildRequests(brids, build.requests, build, bids)
+        # Look for additional build requests that might have been merged into
+        # these known `brids`
+        otherBrids = yield self.master.db.buildrequests.getBuildRequestsIDsMergedInto(brids)
+        brids.update(set(otherBrids))
+
+        d = yield self.finishBuildRequests(sorted(brids), build.requests, build, bids)
 
         self.building.remove(build)
 
@@ -558,7 +565,7 @@ class Builder(config.ReconfigurableServiceMixin,
 
         self.updateBigStatus()
 
-        return d
+        defer.returnValue(d)
 
     @defer.inlineCallbacks
     def finishBuildRequestsFailed(self, failure, msg, brids):
