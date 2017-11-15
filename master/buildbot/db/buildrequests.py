@@ -920,7 +920,7 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
         def thd(conn):
             buildrequests_tbl = self.db.model.buildrequests
             res = conn.execute(
-                sa.select([buildrequests_tbl.id]) \
+                sa.select([buildrequests_tbl.c.id]) \
                 .where(buildrequests_tbl.c.mergebrid.in_(brids))
             )
             brids = [row.id for row in res.fetchall()]
