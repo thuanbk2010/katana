@@ -43,7 +43,7 @@
 
                 {% if authz.advertiseAction('stopAllBuilds', request) %}
                     <h2 class="head-2">Stop Entire Build Chain</h2>
-                    {{ forms.stop_build(build_url+"/stopchain"+codebases_arg, authz, on_all=True, label='Entire Build Chain', short=False) }}
+                    {{ forms.stop_build(build_url+"/stopchain"+codebases_arg, authz, on_all=True, label='Entire Build Chain', short=False, build_chain_top_build_url=build_chain_top_build_url) }}
                     <div class="divider"></div>
                 {% else %}
                     <div class="divider"></div>
@@ -57,7 +57,8 @@
                 <h2 class="head-2">
                     Resubmit Build
                 </h2>
-                {{ forms.rebuild_build(build_url+"/rebuild"+codebases_arg, authz, sourcestamps[0], builder.name, path_to_builder, build_chain_top_build_url) }}
+                {{ forms.rebuild_build(build_url+"/rebuild"+codebases_arg, authz, sourcestamps[0], builder.name,
+                path_to_builder) }}
                 <div class="divider"></div>
             {% endif %}
 
