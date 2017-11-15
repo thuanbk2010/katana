@@ -923,9 +923,9 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
                 sa.select([buildrequests_tbl.c.id]) \
                 .where(buildrequests_tbl.c.mergebrid.in_(brids))
             )
-            brids = [row.id for row in res.fetchall()]
+            rv = [row.id for row in res.fetchall()]
             res.close()
-            return brids
+            return rv
         return self.db.pool.do(thd)
 
     def insertBuildRequestClaimsTable(self, conn, _master_objectid, brids, claimed_at=None):
