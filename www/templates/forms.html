@@ -43,7 +43,7 @@
   {% endif %}
 {% endmacro %}
 
-{% macro stop_build(stop_url, authz, on_all=False, on_selected=False, builders=[], short=False, label="Build") %}
+{% macro stop_build(stop_url, authz, on_all=False, on_selected=False, builders=[], short=False, label="Build", build_chain_top_build_url=None) %}
   {% if not short %}
     <form method="post" name="stop_build" action="{{ stop_url }}" class='command stopbuild'
           {% if on_all %} data-stop-chain="stopchain" {% endif %}
@@ -72,6 +72,9 @@
       {% endif %}
 
       <input class="grey-btn" type="submit" value="Stop {{ label }}" />
+      {% if build_chain_top_build_url %}
+        <a class="grey-btn" href="{{ build_chain_top_build_url }}">build chain top build</a>
+      {% endif %}
     </form>
   {% endif %}
 {% endmacro %}
@@ -280,7 +283,7 @@
   </form>
 {% endmacro %}
 
-{% macro rebuild_build(rebuild_url, authz, ss, builderName, url, build_chain_top_build_url=None) %}
+{% macro rebuild_build(rebuild_url, authz, ss, builderName, url) %}
 <div class="forms-inline">
  <form id="buildForm" method="post" action="{{ rebuild_url }}&property1name=force_rebuild&property1value=True" class="command rebuild">
 
@@ -293,11 +296,6 @@
   {% endif %}
      
      <input class="full-name-js" type='hidden' name='comments' />
-
-     {% if build_chain_top_build_url %}
-        <a class="grey-btn" href="{{ build_chain_top_build_url }}">top build</a>
-     {% endif %}
-
      <input class="grey-btn" type="submit" value="Rebuild" />
    
  </form>
