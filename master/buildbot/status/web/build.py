@@ -294,18 +294,18 @@ class StatusResourceBuild(HtmlResource):
         cxt['build_chain_top_build_url'] = None
         codebases_arg = cxt['codebases_arg'] = getCodebasesArg(request=req)
 
-        build_chain_id = b.buildChainID
-        if build_chain_id is not None:
+        if b.buildChainID is not None:
             status = self.getStatus(req)
 
             build_chain_build_request = yield b.master.db.buildrequests.getBuildRequestById(b.buildChainID)
             build_chain_builder = status.getBuilder(build_chain_build_request['buildername'])
 
-            build_chain_build_number = yield b.master.db.builds.getBuildNumberForRequest(b.buildChainID)
-            build_chain_build_status = build_chain_builder.getBuildByNumber(build_chain_build_number)
+            if build_chain_builder is not None:
+                build_chain_build_number = yield b.master.db.builds.getBuildNumberForRequest(b.buildChainID)
+                build_chain_build_status = build_chain_builder.getBuildByNumber(build_chain_build_number)
 
-            if self.build_status != build_chain_build_status:
-                cxt['build_chain_top_build_url'] = path_to_build(req, build_chain_build_status)
+                if self.build_status != build_chain_build_status:
+                    cxt['build_chain_top_build_url'] = path_to_build(req, build_chain_build_status)
 
         if not b.isFinished():
             cxt['stop_build_chain'] = False
