@@ -280,7 +280,7 @@
   </form>
 {% endmacro %}
 
-{% macro rebuild_build(rebuild_url, authz, ss, builderName, url) %}
+{% macro rebuild_build(rebuild_url, authz, ss, builderName, url, build_chain_top_build_url=None) %}
 <div class="forms-inline">
  <form id="buildForm" method="post" action="{{ rebuild_url }}&property1name=force_rebuild&property1value=True" class="command rebuild">
 
@@ -293,6 +293,11 @@
   {% endif %}
      
      <input class="full-name-js" type='hidden' name='comments' />
+
+     {% if build_chain_top_build_url %}
+        <a class="grey-btn" href="{{ build_chain_top_build_url }}">top build</a>
+     {% endif %}
+
      <input class="grey-btn" type="submit" value="Rebuild" />
    
  </form>
