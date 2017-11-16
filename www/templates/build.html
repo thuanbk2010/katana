@@ -21,6 +21,11 @@
 
             </div>
 
+            {% if build_chain_top_build_url %}
+                <div class="divider"></div>
+                <a class="grey-btn" href="{{ build_chain_top_build_url }}">build chain top build</a>
+            {% endif %}
+
             {% if b.isResuming() %}
                 <div class="divider"></div>
                 <h2 class="head-2">
@@ -43,7 +48,7 @@
 
                 {% if authz.advertiseAction('stopAllBuilds', request) %}
                     <h2 class="head-2">Stop Entire Build Chain</h2>
-                    {{ forms.stop_build(build_url+"/stopchain"+codebases_arg, authz, on_all=True, label='Entire Build Chain', short=False, build_chain_top_build_url=build_chain_top_build_url) }}
+                    {{ forms.stop_build(build_url+"/stopchain"+codebases_arg, authz, on_all=True, label='Entire Build Chain', short=False) }}
                     <div class="divider"></div>
                 {% else %}
                     <div class="divider"></div>
