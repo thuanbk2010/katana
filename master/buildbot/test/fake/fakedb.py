@@ -1003,6 +1003,10 @@ class FakeBuildRequestsComponent(FakeDBComponent):
     def getBuildRequestInQueue(self, buildername=None, sourcestamps=None, sorted=True, limit=None):
         return self.getBuildRequests(buildername=buildername, complete=False, claimed=False)
 
+    def getBuildRequestsIDsMergedInto(self, brids):
+        rv = [br.id for br in self.reqs.itervalues() if br.mergebrid in brids]
+        return defer.succeed(rv)
+
     def claimBuildRequests(self, brids, claimed_at=None):
         for brid in brids:
             if brid not in self.reqs or brid in self.claims:

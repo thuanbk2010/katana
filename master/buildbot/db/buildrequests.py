@@ -916,6 +916,18 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
 
         return self.db.pool.do(thd)
 
+    def getBuildRequestsIDsMergedInto(self, brids):
+        def thd(conn):
+            buildrequests_tbl = self.db.model.buildrequests
+            res = conn.execute(
+                sa.select([buildrequests_tbl.c.id]) \
+                .where(buildrequests_tbl.c.mergebrid.in_(brids))
+            )
+            rv = [row.id for row in res.fetchall()]
+            res.close()
+            return rv
+        return self.db.pool.do(thd)
+
     def insertBuildRequestClaimsTable(self, conn, _master_objectid, brids, claimed_at=None):
         tbl = self.db.model.buildrequest_claims
         q = tbl.insert()
