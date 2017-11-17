@@ -284,7 +284,11 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
             build_path = self.master.status.getBuildersPath(builder_name, build_number)
             return urljoin('/', build_path)
 
+        def handleKeyError(failure):
+            failure.trap(KeyError)
+
         d.addCallback(createTopBuildUrl)
+        d.addErrback(handleKeyError)
 
         return d
 
