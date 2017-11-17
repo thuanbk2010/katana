@@ -13,25 +13,26 @@
 #
 # Copyright Buildbot Team Members
 import json
+import time
+import urllib
 
 from twisted.web import html
 from twisted.internet import defer, reactor
 from twisted.web.util import Redirect, DeferredResource
-
-import urllib, time
 from twisted.python import log
+
 from buildbot.status.web.base import HtmlResource, \
      css_classes, path_to_build, path_to_builder, path_to_slave, \
-    path_to_codebases, path_to_builders, path_to_step, getCodebasesArg, \
+     path_to_codebases, path_to_builders, path_to_step, getCodebasesArg, \
      getAndCheckProperties, ActionResource, path_to_authzfail, \
      getRequestCharset, path_to_json_build
 from buildbot.schedulers.forcesched import ForceScheduler, TextParameter
-from buildbot.status.builder import BuilderStatus
 from buildbot.status.web.status_json import BuildJsonResource
 from buildbot.status.web.step import StepsResource
 from buildbot.status.web.tests import TestsResource
 from buildbot import util, interfaces
-from buildbot.status.results import RESUME, EXCEPTION
+from buildbot.status.results import RESUME
+
 
 class ForceBuildActionResource(ActionResource):
 
@@ -291,21 +292,8 @@ class StatusResourceBuild(HtmlResource):
         cxt['build_url'] = path_to_build(req, b, False)
         cxt['slave_debug_url'] = self.getBuildmaster(req).config.slave_debug_url
         cxt['customBuildUrls'] = b.getCustomUrls()
-        cxt['build_chain_top_build_url'] = None
+        cxt['build_chain_top_build_url'] = yield b.getTopBuildUrl()
         codebases_arg = cxt['codebases_arg'] = getCodebasesArg(request=req)
-
-        if b.buildChainID is not None:
-            status = self.getStatus(req)
-
-            build_chain_build_request = yield b.master.db.buildrequests.getBuildRequestById(b.buildChainID)
-            build_chain_builder = status.getBuilder(build_chain_build_request['buildername'])
-
-            if build_chain_builder is not None:
-                build_chain_build_number = yield b.master.db.builds.getBuildNumberForRequest(b.buildChainID)
-                build_chain_build_status = build_chain_builder.getBuildByNumber(build_chain_build_number)
-
-                if self.build_status != build_chain_build_status:
-                    cxt['build_chain_top_build_url'] = path_to_build(req, build_chain_build_status)
 
         if not b.isFinished():
             cxt['stop_build_chain'] = False
