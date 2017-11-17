@@ -272,7 +272,7 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
             self) else ''
 
     def getTopBuildUrl(self):
-        d = self.master.db.buildrequests.selectTopBuildData(self.buildChainID)
+        d = self.master.db.buildrequests.getTopBuildData(self.buildChainID)
 
         def createTopBuildUrl(build_chain):
             builder_name = build_chain['buildername']

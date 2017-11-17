@@ -1477,3 +1477,25 @@ class TestBuildsetsConnectorComponent(
         d.addCallback(lambda _: self.db.buildrequests.getBuildRequests(buildername='bldr1', brids=[4]))
         d.addCallback(self.checkCanceledBuildRequests, complete=False, results=RESUME)
         return d
+
+    @defer.inlineCallbacks
+    def test_getTopBuildData(self):
+        build_chain_id = 1
+        build_number = 5
+        buildername = 'builder1'
+
+        build_requests = [
+            fakedb.BuildRequest(id=1, buildsetid=1, buildername='builder1', priority=20, submitted_at=1450171024),
+            fakedb.BuildRequest(id=2, buildsetid=2, buildername='builder2', priority=20, submitted_at=1450171090),
+        ]
+
+        builds = [
+            fakedb.Build(id=50, brid=1, number=5, start_time=1304262222, finish_time=1452520540),
+            fakedb.Build(id=51, brid=2, number=6, start_time=1304262222, finish_time=1452520540),
+        ]
+
+        self.insertTestData(build_requests + builds)
+
+        result = yield self.db.buildrequests.getTopBuildData(build_chain_id)
+
+        assert result == {'buildername': buildername, 'build_number': build_number}
