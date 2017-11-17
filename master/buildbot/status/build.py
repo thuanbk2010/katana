@@ -15,8 +15,13 @@
 
 from __future__ import with_statement
 
-import os, shutil, re
+import os
+import re
+import shutil
+import time
+from urlparse import urljoin
 from cPickle import dump
+
 from zope.interface import implements
 from twisted.python import log, runtime, components
 from twisted.persisted import styles
@@ -26,7 +31,6 @@ from buildbot.process import properties
 from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildstep import BuildStepStatus
 from buildbot.status.results import SUCCESS, NOT_REBUILT, SKIPPED, RESUME, CANCELED, RETRY, MERGED
-import time
 
 # Avoid doing an import since it creates circular reference
 
@@ -266,6 +270,23 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
     def getBuildUrl(self):
         return self.master.status.getURLForThing(self)['path'] if 'path' in self.master.status.getURLForThing(
             self) else ''
+
+    def getTopBuildUrl(self):
+        d = self.master.db.buildrequests.selectTopBuildData(self.buildChainID)
+
+        def createTopBuildUrl(build_chain):
+            builder_name = build_chain['buildername']
+            build_number = build_chain['build_number']
+
+            if self.number == build_number:
+                return None
+
+            build_path = self.master.status.getBuildersPath(builder_name, build_number)
+            return urljoin('/', build_path)
+
+        d.addCallback(createTopBuildUrl)
+
+        return d
 
     # subscription interface
 
