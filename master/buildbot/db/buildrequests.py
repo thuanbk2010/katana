@@ -120,36 +120,6 @@ def with_master_objectid(fn):
 class BuildRequestsConnectorComponent(base.DBConnectorComponent):
     # Documentation is in developer/database.rst
 
-    def selectTopBuildData(self, build_chain_id):
-        def thd(conn):
-            build_request_table = self.db.model.buildrequests
-            builds_table = self.db.model.builds
-            row_data = {}
-
-            result = conn.execute(
-                sa.select(
-                    columns=[build_request_table.c.buildername, builds_table.c.number],
-                    from_obj=[
-                        build_request_table.join(
-                            builds_table,
-                            build_request_table.c.id == builds_table.c.brid,
-                        ),
-                    ],
-                    whereclause=(build_request_table.c.id == build_chain_id),
-                    use_labels=True,
-                ),
-            )
-
-            row = result.fetchone()
-            if row:
-                row_data = {'buildername': row['buildrequests_buildername'], 'build_number': row['builds_number']}
-
-            result.close()
-
-            return row_data
-
-        return self.db.pool.do(thd)
-
     @with_master_objectid
     def getBuildRequest(self, brid, _master_objectid=None):
         def thd(conn):
@@ -1329,6 +1299,36 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
                 return
 
             transaction.commit()
+
+        return self.db.pool.do(thd)
+
+    def getTopBuildData(self, build_chain_id):
+        def thd(conn):
+            build_request_tbl = self.db.model.buildrequests
+            builds_tbl = self.db.model.builds
+            row_data = {}
+
+            result = conn.execute(
+                sa.select(
+                    columns=[build_request_tbl.c.buildername, builds_tbl.c.number],
+                    from_obj=[
+                        build_request_tbl.join(
+                            builds_tbl,
+                            build_request_tbl.c.id == builds_tbl.c.brid,
+                        ),
+                    ],
+                    whereclause=(build_request_tbl.c.id == build_chain_id),
+                    use_labels=True,
+                ),
+            )
+
+            row = result.fetchone()
+            if row:
+                row_data = {'buildername': row['buildrequests_buildername'], 'build_number': row['builds_number']}
+
+            result.close()
+
+            return row_data
 
         return self.db.pool.do(thd)
 
