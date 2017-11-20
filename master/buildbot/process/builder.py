@@ -554,9 +554,12 @@ class Builder(config.ReconfigurableServiceMixin,
 
         # Look for additional build requests that might have been merged into
         # these known build requests
-        otherBreqs = yield self.master.db.buildrequests.getBuildRequests(
+        otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
             mergebrids=list(breqs.keys()))
-        otherBreqs = map(BuildRequest.fromBrdict, otherBreqs)
+        otherBreqs = [
+            BuildRequest.fromBrdict(self.master, brdict)
+            for brdict in otherBrdicts
+        ]
 
         # Include the missing ones
         for br in otherBreqs:
