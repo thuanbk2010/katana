@@ -146,6 +146,8 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
                 brids[buildername] = res.inserted_primary_key[0]
 
             # Do the rest of the merge process for merged builds
+            # Check if we have anything, because SQLAlchemy breaks if you try inserting an empty
+            # list of values
             if brDictsToMerge:
                 current_time = _reactor.seconds()
 
@@ -156,12 +158,19 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
                                  for (buildername, _mergeBrDict) in brDictsToMerge.iteritems()])
 
                 # If we are merging against a running request, register a build for this breq
-                q = self.db.model.builds.insert()
-                conn.execute(q, [dict(number=mergeBrDict['build_number'], brid=brids[buildername],
-                                      start_time=current_time, finish_time=None)
-                                 for (buildername, mergeBrDict) in brDictsToMerge.iteritems()
-                                 if mergeBrDict['build_number']
-                             ])
+                # Again, check if there are merge target with build numbers, otherwise SQLAlchemy
+                # will break when inserting empty list of values
+                brDictsWithBuilds = {
+                    buildername: mergeBrDict
+                    for (buildername, mergeBrDict) in brDictsToMerge.iteritems()
+                    if mergeBrDict['build_number']
+                }
+                if brDictsWithBuilds:
+                    q = self.db.model.builds.insert()
+                    conn.execute(q, [dict(number=mergeBrDict['build_number'], brid=brids[buildername],
+                                          start_time=current_time, finish_time=None)
+                                     for (buildername, mergeBrDict) in brDictsWithBuilds.iteritems()
+                                 ])
 
             transaction.commit()
 
