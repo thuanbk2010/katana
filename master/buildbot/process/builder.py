@@ -556,10 +556,11 @@ class Builder(config.ReconfigurableServiceMixin,
         # these known build requests
         otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
             mergebrids=list(breqs.keys()))
-        otherBreqs = [
-            BuildRequest.fromBrdict(self.master, brdict)
-            for brdict in otherBrdicts
-        ]
+        otherBreqs = []
+
+        for brdict in otherBrdicts:
+            breq = yield BuildRequest.fromBrdict(self.master, brdict)
+            otherBreqs.append(breq)
 
         # Include the missing ones
         for br in otherBreqs:
