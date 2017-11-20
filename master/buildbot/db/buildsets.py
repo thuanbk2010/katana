@@ -33,6 +33,19 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
     def addBuildset(self, sourcestampsetid, reason, properties, triggeredbybrid=None,
                     builderNames=None, external_idstring=None, brDictsToMerge=None,
                     _reactor=reactor, _master_objectid=None):
+        """
+        :param sourcestampsetid:
+        :param reason:
+        :param properties:
+        :param triggeredbybrid:
+        :param builderNames:
+        :param external_idstring:
+        :param dict(string:BrDict) brDictsToMerge:
+            Dictionary of build request dictionaries to merge into.
+            Maps a buildername (for new build requests being added) to a build request
+            we want to merge into.
+        :return:
+        """
         if brDictsToMerge is None:
             brDictsToMerge = {}
 
@@ -96,8 +109,9 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
             # Not that doing this second check here only works because we rely on the build finish
             # code running in the same thread as we are (never in parallel, and certainly would not
             # work in a multi-master environment).
+            mergebrids = [mergeBrDict['brid'] for mergeBrDict in brDictsToMerge.values()]
             q = sa.select([br_tbl.c.buildername]) \
-                .where(br_tbl.c.id.in_([mergeBrDict['brid'] for mergeBrDict in brDictsToMerge])) \
+                .where(br_tbl.c.id.in_(mergebrids)) \
                 .where(br_tbl.c.complete != 0)
             finishedBuildernames = [row.buildername for row in conn.execute(q).fetchall()]
 
