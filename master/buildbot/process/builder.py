@@ -22,6 +22,7 @@ from twisted.application import service, internet
 from twisted.internet import defer
 
 from buildbot import interfaces, config
+from buildbot.process.buildrequest import BuildRequest
 from buildbot.status.progress import Expectations
 from buildbot.status.results import RETRY, RESUME, BEGINNING
 from buildbot.status.buildrequest import BuildRequestStatus
@@ -549,14 +550,23 @@ class Builder(config.ReconfigurableServiceMixin,
         (maybeStartBuilds)
         """
         # List all known build requests tied to this `build`
-        brids = {br.id for br in build.requests}
+        breqs = {br.id : br for br in build.requests}
 
         # Look for additional build requests that might have been merged into
-        # these known `brids`
-        otherBrids = yield self.master.db.buildrequests.getBuildRequestsIDsMergedInto(brids)
-        brids.update(set(otherBrids))
+        # these known build requests
+        otherBreqs = yield self.master.db.buildrequests.getBuildRequests(
+            mergebrids=list(breqs.keys()))
 
-        d = yield self.finishBuildRequests(sorted(brids), build.requests, build, bids)
+        # Include the missing ones
+        for br in otherBreqs:
+            breqs.setdefault(br.id, br)
+
+        d = yield self.finishBuildRequests(
+            brids=list(breqs.keys()),
+            requests=list(breqs.values()),
+            build=build,
+            bids=bids,
+        )
 
         self.building.remove(build)
 
