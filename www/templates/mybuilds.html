@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% import 'submenu.html' as submenu %}
+
+{% set bodyId = 'id="mybuilds"' %}
+
+{% block content %}
+
+<h2>Your builds run in last 24h</h2>
+
+<table class="table table-katana table-stripes no-bg tablesorter dataTable tablesorter-js shortcut-js tools-js">
+    <thead>
+    <tr>
+        <th>Build ID</th>
+        <th>Project</th>
+        <th>Builder name</th>
+        <th>Completed</th>
+        <th>Build number</th>
+        <th>Build slave</th>
+        <th>Submitted at</th>
+        <th>Completed at</th>
+        <th>Reason</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for build in builds %}
+    <tr>
+        <td>
+            <a href="/projects/{{ build.project }}/builders/{{ build.buildername }}/builds/{{ build.builds_number }}">
+                {{ build.builds_id }}
+            </a>
+        </td>
+        <td>
+            {{ build.project }}
+        </td>
+        <td>
+            {{ build.buildername }}
+        </td>
+        <td
+                {% if build.complete %}
+                class="success"
+                {% else %}
+                class="failure"
+                {% endif %}
+        >
+            {{ build.complete }}
+        </td>
+        <td>
+            {{ build.builds_number }}
+        </td>
+        <td>
+            <a href="/buildslaves/{{ build.slavename }}">{{ build.slavename }}</a>
+        </td>
+        <td>
+            {{ build.submitted_at }}
+        </td>
+        <td>
+            {{ build.complete_at }}
+        </td>
+        <td>
+            {{ build.reason }}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
