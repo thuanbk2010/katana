@@ -292,8 +292,8 @@ class StatusResourceBuild(HtmlResource):
         cxt['build_url'] = path_to_build(req, b, False)
         cxt['slave_debug_url'] = self.getBuildmaster(req).config.slave_debug_url
         cxt['customBuildUrls'] = b.getCustomUrls()
-        cxt['build_chain_top_build_url'] = yield b.getTopBuildUrl()
         codebases_arg = cxt['codebases_arg'] = getCodebasesArg(request=req)
+        cxt['build_chain_top_build_url'] = yield b.getTopBuildUrl(codebases_arg)
 
         if not b.isFinished():
             cxt['stop_build_chain'] = False

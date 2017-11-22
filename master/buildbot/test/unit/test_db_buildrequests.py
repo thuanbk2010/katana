@@ -1499,3 +1499,8 @@ class TestBuildsetsConnectorComponent(
         result = yield self.db.buildrequests.getTopBuildData(build_chain_id)
 
         assert result == {'buildername': buildername, 'build_number': build_number}
+
+    @defer.inlineCallbacks
+    def test_getTopBuildData_build_chain_is_none(self):
+        result = yield self.db.buildrequests.getTopBuildData(None)
+        assert result == {}
