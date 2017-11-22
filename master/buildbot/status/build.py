@@ -271,18 +271,19 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
         return self.master.status.getURLForThing(self)['path'] if 'path' in self.master.status.getURLForThing(
             self) else ''
 
-    def getTopBuildUrl(self):
+    def getTopBuildUrl(self, codebases_arg):
         d = self.master.db.buildrequests.getTopBuildData(self.buildChainID)
 
         def createTopBuildUrl(build_chain):
-            builder_name = build_chain['buildername']
+            buildername = build_chain['buildername']
             build_number = build_chain['build_number']
 
-            if self.number == build_number:
+            if self.builder.name == buildername and self.number == build_number:
                 return None
 
-            build_path = self.master.status.getBuildersPath(builder_name, build_number)
-            return urljoin('/', build_path)
+            build_path = self.master.status.getBuildersPath(buildername, build_number)
+
+            return '{}{}'.format(urljoin('/', build_path), codebases_arg)
 
         def handleKeyError(failure):
             failure.trap(KeyError)
