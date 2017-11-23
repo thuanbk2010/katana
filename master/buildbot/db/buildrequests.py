@@ -1318,6 +1318,8 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
                         ),
                     ],
                     whereclause=(build_request_tbl.c.id == build_chain_id),
+                    order_by=sa.desc(builds_tbl.c.number),
+                    limit=1,
                     use_labels=True,
                 ),
             )
