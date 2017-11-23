@@ -13,7 +13,7 @@
 #
 # Copyright Buildbot Team Members
 
-import datetime
+from datetime import datetime, timedelta
 import sqlalchemy as sa
 from twisted.trial import unittest
 from twisted.internet import task, defer
@@ -31,11 +31,11 @@ class TestBuildsetsConnectorComponent(
     # test that the datetime translations are done correctly by specifying
     # the epoch timestamp and datetime objects explicitly.  These should
     # pass regardless of the local timezone used while running tests!
-    CLAIMED_AT = datetime.datetime(1978, 6, 15, 12, 31, 15, tzinfo=UTC)
+    CLAIMED_AT = datetime(1978, 6, 15, 12, 31, 15, tzinfo=UTC)
     CLAIMED_AT_EPOCH = 266761875
-    SUBMITTED_AT = datetime.datetime(1979, 6, 15, 12, 31, 15, tzinfo=UTC)
+    SUBMITTED_AT = datetime(1979, 6, 15, 12, 31, 15, tzinfo=UTC)
     SUBMITTED_AT_EPOCH = 298297875
-    COMPLETE_AT = datetime.datetime(1980, 6, 15, 12, 31, 15, tzinfo=UTC)
+    COMPLETE_AT = datetime(1980, 6, 15, 12, 31, 15, tzinfo=UTC)
     COMPLETE_AT_EPOCH = 329920275
     BSID = 567
     BSID2 = 5670
@@ -777,8 +777,8 @@ class TestBuildsetsConnectorComponent(
         def check(brdict):
             self.assertEqual(brdict,
                     dict(artifactbrid=None, brid=2, buildername="B", buildsetid=2,
-                        complete=True, complete_at=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC), priority=0,
-                        results=0, submitted_at=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC)
+                        complete=True, complete_at=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC), priority=0,
+                        results=0, submitted_at=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC)
                         ))
         d.addCallback(check)
         return d
@@ -1015,9 +1015,9 @@ class TestBuildsetsConnectorComponent(
         def checkBuild(bdict):
             self.assertEqual(bdict, [dict(bid=2,
                                          brid=2,
-                                         finish_time=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC),
+                                         finish_time=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC),
                                          number=1,
-                                         start_time=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC))])
+                                         start_time=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC))])
             self.assertTrue(True)
 
         d.addCallback(lambda _: self.db.buildrequests.findCompatibleFinishedBuildRequest(buildername="builder",
@@ -1060,9 +1060,9 @@ class TestBuildsetsConnectorComponent(
         def checkBuild(bdict):
             self.assertEqual(bdict, [dict(bid=3,
                                          brid=7,
-                                         finish_time=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC),
+                                         finish_time=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC),
                                          number=1,
-                                         start_time=datetime.datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC))])
+                                         start_time=datetime(2014, 12, 17, 13, 31, 26, tzinfo=UTC))])
 
         d.addCallback(lambda _: self.db.buildrequests.findCompatibleFinishedBuildRequest(buildername="builder",
                                                                                          startbrid=1))
@@ -1504,3 +1504,35 @@ class TestBuildsetsConnectorComponent(
     def test_getTopBuildData_build_chain_is_none(self):
         result = yield self.db.buildrequests.getTopBuildData(None)
         assert result == {}
+
+    @defer.inlineCallbacks
+    def test_getTopBuildData_get_latest_build(self):
+        build_chain_id = 1
+        build_number = 6
+        buildername = 'builder1'
+
+        brid_submitted_at = datetime(2017, 1, 1, 0, 30, 00)
+        first_build_start = (brid_submitted_at + timedelta(seconds=10)).strftime('%s')
+        second_build_start = (brid_submitted_at + timedelta(seconds=20)).strftime('%s')
+        second_build_finished = (brid_submitted_at + timedelta(seconds=30)).strftime('%s')
+
+        build_requests = [
+            fakedb.BuildRequest(
+                id=build_chain_id,
+                buildsetid=1,
+                buildername='builder1',
+                priority=20,
+                submitted_at=brid_submitted_at.strftime('%s'),
+            )
+        ]
+
+        builds = [
+            fakedb.Build(id=50, brid=1, number=5, start_time=first_build_start, finish_time=None),
+            fakedb.Build(id=51, brid=1, number=6, start_time=second_build_start, finish_time=second_build_finished),
+        ]
+
+        self.insertTestData(build_requests + builds)
+
+        result = yield self.db.buildrequests.getTopBuildData(build_chain_id)
+
+        self.assertEqual(result, {'buildername': buildername, 'build_number': build_number})
