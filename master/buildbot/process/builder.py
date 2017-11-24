@@ -549,29 +549,35 @@ class Builder(config.ReconfigurableServiceMixin,
         which will trigger a check for any now-possible build requests
         (maybeStartBuilds)
         """
+
         # List all known build requests tied to this `build`
         breqs = {br.id : br for br in build.requests}
 
-        # Look for additional build requests that might have been merged into
-        # these known build requests
-        otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
-            mergebrids=list(breqs.keys()))
-        otherBreqs = []
+        # Prevent new merged builds from coming in while we are finishing
+        yield self.master.buildrequest_merger.build_merging_lock.acquire()
+        try:
+            # Look for additional build requests that might have been merged into
+            # these known build requests
+            otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
+                mergebrids=list(breqs.keys()))
+            otherBreqs = []
 
-        for brdict in otherBrdicts:
-            breq = yield BuildRequest.fromBrdict(self.master, brdict)
-            otherBreqs.append(breq)
+            for brdict in otherBrdicts:
+                breq = yield BuildRequest.fromBrdict(self.master, brdict)
+                otherBreqs.append(breq)
 
-        # Include the missing ones
-        for br in otherBreqs:
-            breqs.setdefault(br.id, br)
+            # Include the missing ones
+            for br in otherBreqs:
+                breqs.setdefault(br.id, br)
 
-        d = yield self.finishBuildRequests(
-            brids=list(breqs.keys()),
-            requests=list(breqs.values()),
-            build=build,
-            bids=bids,
-        )
+            d = yield self.finishBuildRequests(
+                brids=list(breqs.keys()),
+                requests=list(breqs.values()),
+                build=build,
+                bids=bids,
+            )
+        finally:
+            self.master.buildrequest_merger.build_merging_lock.acquire()
 
         self.building.remove(build)
 

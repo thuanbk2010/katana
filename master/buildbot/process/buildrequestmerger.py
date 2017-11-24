@@ -29,6 +29,10 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             miss_fn=None,  # Cache contents are handled manually
             max_size=20000)
 
+        # lock to indicate that merged builds are being added
+        self.build_merging_lock = defer.DeferredLock()
+
+
     @defer.inlineCallbacks
     def addBuildset(self,
                     sourcestampsetid,
@@ -101,16 +105,23 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         # This method will make sure that all new breqs will enter the db
         # marked as merged, and will not run.
         _master_objectid = yield self.master.getObjectId()
-        result = yield self.master.db.buildsets.addBuildset(
-            sourcestampsetid=sourcestampsetid,
-            reason=reason,
-            properties=properties,
-            triggeredbybrid=triggeredbybrid,
-            builderNames=builderNames,
-            brDictsToMerge=brDictsToMerge,
-            external_idstring=external_idstring,
-            _reactor=_reactor,
-            _master_objectid=_master_objectid)
+
+        if brDictsToMerge:
+            yield self.build_finishing_lock.acquire()
+        try:
+            result = yield self.master.db.buildsets.addBuildset(
+                sourcestampsetid=sourcestampsetid,
+                reason=reason,
+                properties=properties,
+                triggeredbybrid=triggeredbybrid,
+                builderNames=builderNames,
+                brDictsToMerge=brDictsToMerge,
+                external_idstring=external_idstring,
+                _reactor=_reactor,
+                _master_objectid=_master_objectid)
+        finally:
+            if brDictsToMerge:
+                self.build_finishing_lock.release()
 
         # Log more ids
         (bsid, brids) = result

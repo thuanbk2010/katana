@@ -42,8 +42,13 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
         :param external_idstring:
         :param dict(string:BrDict) brDictsToMerge:
             Dictionary of build request dictionaries to merge into.
+
             Maps a buildername (for new build requests being added) to a build request
             we want to merge into.
+
+            This function assumes that all of there merge targets are currently running
+            and that they will not finish while this function is running (ie, this
+            function is not thread-safe and assumes it runs inside a lock)
         :return:
         """
         if brDictsToMerge is None:
@@ -101,23 +106,6 @@ class BuildsetsConnectorComponent(base.DBConnectorComponent):
                 row = res.fetchone()
                 if row and (row.startbrid is not None):
                     startbrid = row.startbrid
-
-            # Check if anything in brDictsToMerge finished while we were being created.
-            # We do this to avoid database mrge conditions where we could be merging into a breq
-            # that has finished during this merge process (which means that our new breq would
-            # never be finished by master).
-            # Not that doing this second check here only works because we rely on the build finish
-            # code running in the same thread as we are (never in parallel, and certainly would not
-            # work in a multi-master environment).
-            mergebrids = [mergeBrDict['brid'] for mergeBrDict in brDictsToMerge.values()]
-            q = sa.select([br_tbl.c.buildername]) \
-                .where(br_tbl.c.id.in_(mergebrids)) \
-                .where(br_tbl.c.complete != 0)
-            finishedBuildernames = [row.buildername for row in conn.execute(q).fetchall()]
-
-            # If a merge target has finished, abort the merge
-            for buildername in finishedBuildernames:
-                brDictsToMerge.pop(buildername, None)
 
             ins = br_tbl.insert()
             for buildername in builderNames:
