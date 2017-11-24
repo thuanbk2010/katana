@@ -107,7 +107,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         _master_objectid = yield self.master.getObjectId()
 
         if brDictsToMerge:
-            yield self.build_finishing_lock.acquire()
+            yield self.build_merging_lock.acquire()
         try:
             result = yield self.master.db.buildsets.addBuildset(
                 sourcestampsetid=sourcestampsetid,
@@ -121,7 +121,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                 _master_objectid=_master_objectid)
         finally:
             if brDictsToMerge:
-                self.build_finishing_lock.release()
+                self.build_merging_lock.release()
 
         # Log more ids
         (bsid, brids) = result

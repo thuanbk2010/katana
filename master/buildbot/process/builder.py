@@ -577,7 +577,7 @@ class Builder(config.ReconfigurableServiceMixin,
                 bids=bids,
             )
         finally:
-            self.master.buildrequest_merger.build_merging_lock.acquire()
+            self.master.buildrequest_merger.build_merging_lock.release()
 
         self.building.remove(build)
 
