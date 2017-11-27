@@ -12,11 +12,10 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Copyright Buildbot Team Members
-
-
+import json
+import time
 import weakref
 
-import time
 from zope.interface import implements
 from twisted.python import log, failure
 from twisted.spread import pb
@@ -591,6 +590,7 @@ class Builder(config.ReconfigurableServiceMixin,
                 bids=bids,
             )
         finally:
+            log.msg(json.dumps(buildFinishedLog))
             self.master.buildrequest_merger.build_merging_lock.release()
 
         self.building.remove(build)
