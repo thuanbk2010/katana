@@ -107,7 +107,9 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         _master_objectid = yield self.master.getObjectId()
 
         if brDictsToMerge:
+            build_merging_lock_start = time.time()
             yield self.build_merging_lock.acquire()
+            buildsetLog['elapsed_build_merging_lock'] = time.time() - build_merging_lock_start
         try:
             result = yield self.master.db.buildsets.addBuildset(
                 sourcestampsetid=sourcestampsetid,
