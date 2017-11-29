@@ -12,9 +12,10 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Copyright Buildbot Team Members
-
-
+import json
+import time
 import weakref
+
 from zope.interface import implements
 from twisted.python import log, failure
 from twisted.spread import pb
@@ -549,29 +550,48 @@ class Builder(config.ReconfigurableServiceMixin,
         which will trigger a check for any now-possible build requests
         (maybeStartBuilds)
         """
+        start = time.time()
+        buildFinishedLog = {
+            'name': 'buildFinished',
+            'description': 'Called when a Build has finished',
+            'number': build.build_status.number,
+        }
+
         # List all known build requests tied to this `build`
         breqs = {br.id : br for br in build.requests}
 
-        # Look for additional build requests that might have been merged into
-        # these known build requests
-        otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
-            mergebrids=list(breqs.keys()))
-        otherBreqs = []
+        # Prevent new merged builds from coming in while we are finishing
+        yield self.master.buildrequest_merger.build_merging_lock.acquire()
+        buildFinishedLog['elapsed_build_merging_lock'] = time.time() - start
 
-        for brdict in otherBrdicts:
-            breq = yield BuildRequest.fromBrdict(self.master, brdict)
-            otherBreqs.append(breq)
+        try:
+            # Look for additional build requests that might have been merged into
+            # these known build requests
+            getBuildRequestsStart = time.time()
+            otherBrdicts = yield self.master.db.buildrequests.getBuildRequests(
+                mergebrids=list(breqs.keys()))
+            otherBreqs = []
+            buildFinishedLog['elapsed_getBuildRequests'] = time.time() - getBuildRequestsStart
 
-        # Include the missing ones
-        for br in otherBreqs:
-            breqs.setdefault(br.id, br)
+            for brdict in otherBrdicts:
+                breq = yield BuildRequest.fromBrdict(self.master, brdict)
+                otherBreqs.append(breq)
 
-        d = yield self.finishBuildRequests(
-            brids=list(breqs.keys()),
-            requests=list(breqs.values()),
-            build=build,
-            bids=bids,
-        )
+            # Include the missing ones
+            for br in otherBreqs:
+                breqs.setdefault(br.id, br)
+
+            buildFinishedLog['brids'] = sorted(breqs.keys())
+
+            d = yield self.finishBuildRequests(
+                brids=list(breqs.keys()),
+                requests=list(breqs.values()),
+                build=build,
+                bids=bids,
+            )
+        finally:
+            log.msg(json.dumps(buildFinishedLog))
+            self.master.buildrequest_merger.build_merging_lock.release()
 
         self.building.remove(build)
 
