@@ -13,7 +13,7 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Copyright Buildbot Team Members
-
+import json
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -654,6 +654,8 @@ class KatanaBuildChooser(BasicBuildChooser):
         mergeRequestsLog['elapsedmergeRequestsFn'] = time.time() - mergeRequestsFnStart
         mergeRequestsLog['mergedRequests'] = [mr.id for mr in mergedRequests]
         mergeRequestsLog['elapsed'] = time.time() - start
+
+        log.msg(json.dumps(mergeRequestsLog))
 
         defer.returnValue(mergedRequests)
 
