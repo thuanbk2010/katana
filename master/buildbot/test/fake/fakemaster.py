@@ -66,7 +66,13 @@ class FakeBuildRequestMerger(object):
 
     def __init__(self, master):
         self.master = master
-        self.build_merging_lock = defer.DeferredLock()
+        self.build_merging_locks = weakref.WeakValueDictionary()
+
+    def getMergingLocks(self, build_request_ids):
+        return [
+            self.build_merging_locks.setdefault(brid, defer.DeferredLock())
+            for brid in build_request_ids
+        ]
 
 class FakeBuilderStatus(object):
 

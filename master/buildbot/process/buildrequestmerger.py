@@ -1,5 +1,6 @@
 import json
 import time
+from weakref import WeakValueDictionary
 
 from twisted.application import service
 from twisted.internet import reactor, defer
@@ -16,7 +17,6 @@ class PropertiesDict(dict):
     """
     pass
 
-
 class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
 
     # Basic list of properties that must match for a buildrequest to be merged
@@ -29,9 +29,14 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             miss_fn=None,  # Cache contents are handled manually
             max_size=20000)
 
-        # lock to indicate that merged builds are being added
-        self.build_merging_lock = defer.DeferredLock()
+        # Locks to indicate that merged builds are being added
+        self.build_merging_locks = WeakValueDictionary()
 
+    def getMergingLocks(self, build_request_ids):
+        return [
+            self.build_merging_locks.setdefault(brid, defer.DeferredLock())
+            for brid in build_request_ids
+        ]
 
     @defer.inlineCallbacks
     def addBuildset(self,
@@ -106,10 +111,20 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         # marked as merged, and will not run.
         _master_objectid = yield self.master.getObjectId()
 
-        if brDictsToMerge:
-            build_merging_lock_start = time.time()
-            yield self.build_merging_lock.acquire()
-            buildsetLog['elapsed_build_merging_lock'] = time.time() - build_merging_lock_start
+        # Create a lock on every build being merged into
+        acquiring_locks_start = time.time()
+        build_merging_locks = {
+            builderName : self.getMergingLocks([brDict['id']])[0]
+            for builderName, brDict in brDictsToMerge.iteritems()
+        }
+        for builderName, lock in build_merging_locks.iteritems():
+            yield lock.acquire()
+            buildsetLog[builderName]['elapsed_acquiring_lock'] = \
+                time.time() - acquiring_locks_start
+        buildsetLog['elapsed_acquiring_locks'] = time.time() - acquiring_locks_start
+        using_locks_start = time.time()
+
+        # Add buildset
         try:
             result = yield self.master.db.buildsets.addBuildset(
                 sourcestampsetid=sourcestampsetid,
@@ -122,8 +137,9 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
                 _reactor=_reactor,
                 _master_objectid=_master_objectid)
         finally:
-            if brDictsToMerge:
-                self.build_merging_lock.release()
+            for lock in build_merging_locks.itervalues():
+                lock.release()
+            buildsetLog['elapsed_using_locks'] = time.time() - using_locks_start
 
         # Log more ids
         (bsid, brids) = result
@@ -134,6 +150,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         log.msg(json.dumps(buildsetLog))
 
         defer.returnValue(result)
+
 
     @defer.inlineCallbacks
     def _getMergeBrDict(self, builderName, sourcestamps, properties,

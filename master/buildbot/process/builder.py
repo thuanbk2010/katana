@@ -561,8 +561,11 @@ class Builder(config.ReconfigurableServiceMixin,
         breqs = {br.id : br for br in build.requests}
 
         # Prevent new merged builds from coming in while we are finishing
-        yield self.master.buildrequest_merger.build_merging_lock.acquire()
-        buildFinishedLog['elapsed_build_merging_lock'] = time.time() - start
+        build_merging_locks = self.master.buildrequest_merger.getMergingLocks(breqs.keys())
+        for lock in build_merging_locks:
+            yield lock.acquire()
+        locks_acquired_start = time.time()
+        buildFinishedLog['elapsed_acquiring_locks'] = time.time() - start
 
         try:
             # Look for additional build requests that might have been merged into
@@ -590,8 +593,10 @@ class Builder(config.ReconfigurableServiceMixin,
                 bids=bids,
             )
         finally:
+            for lock in build_merging_locks:
+                yield lock.release()
+                buildFinishedLog['elapsed_using_locks'] = time.time() - locks_acquired_start
             log.msg(json.dumps(buildFinishedLog))
-            self.master.buildrequest_merger.build_merging_lock.release()
 
         self.building.remove(build)
 
