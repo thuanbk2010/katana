@@ -294,6 +294,7 @@ class StatusResourceBuild(HtmlResource):
         cxt['customBuildUrls'] = b.getCustomUrls()
         codebases_arg = cxt['codebases_arg'] = getCodebasesArg(request=req)
         cxt['build_chain_top_build_url'] = yield b.getTopBuildUrl(codebases_arg)
+        cxt['has_merged_builds'] = yield b.hasMergedBuilds()
 
         if not b.isFinished():
             cxt['stop_build_chain'] = False

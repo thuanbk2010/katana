@@ -1334,6 +1334,20 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
 
         return self.db.pool.do(thd)
 
+    def haveMergedBuildRequests(self, brids):
+        def thd(conn):
+            build_request_tbl = self.db.model.buildrequests
+
+            query = sa.select(
+                columns=[sa.exists().where(build_request_tbl.c.mergebrid.in_(brids))],
+            )
+
+            result, = conn.execute(query).fetchone()
+
+            return bool(result)
+
+        return self.db.pool.do(thd)
+
     def _brdictFromRow(self, row, master_objectid):
         claimed = mine = False
         claimed_at = None

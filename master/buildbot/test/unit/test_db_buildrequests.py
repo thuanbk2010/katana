@@ -1536,3 +1536,33 @@ class TestBuildsetsConnectorComponent(
         result = yield self.db.buildrequests.getTopBuildData(build_chain_id)
 
         self.assertEqual(result, {'buildername': buildername, 'build_number': build_number})
+
+    @defer.inlineCallbacks
+    def test_haveMergedBuildRequests_merged_build_exists(self):
+        submitted_at = datetime(2017, 1, 1, 0, 30, 00).strftime('%s')
+        build_requests = [
+            fakedb.BuildRequest(id=1, buildsetid=1, buildername='builder1', submitted_at=submitted_at),
+            fakedb.BuildRequest(id=2, buildsetid=1, buildername='builder1', mergebrid=1, submitted_at=submitted_at),
+            fakedb.BuildRequest(id=3, buildsetid=1, buildername='builder1', mergebrid=1, submitted_at=submitted_at),
+        ]
+
+        self.insertTestData(build_requests)
+
+        result = yield self.db.buildrequests.haveMergedBuildRequests([1])
+
+        self.assertTrue(result)
+
+    @defer.inlineCallbacks
+    def test_haveMergedBuildRequests_merged_build_does_not_exists(self):
+        submitted_at = datetime(2017, 1, 1, 0, 30, 00).strftime('%s')
+        build_requests = [
+            fakedb.BuildRequest(id=1, buildsetid=1, buildername='builder1', submitted_at=submitted_at),
+            fakedb.BuildRequest(id=2, buildsetid=2, buildername='builder1', submitted_at=submitted_at),
+            fakedb.BuildRequest(id=3, buildsetid=3, buildername='builder1', submitted_at=submitted_at),
+        ]
+
+        self.insertTestData(build_requests)
+
+        result = yield self.db.buildrequests.haveMergedBuildRequests([1])
+
+        self.assertFalse(result)

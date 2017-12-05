@@ -293,6 +293,9 @@ class BuildStatus(styles.Versioned, properties.PropertiesMixin):
 
         return d
 
+    def hasMergedBuilds(self):
+        return self.master.db.buildrequests.haveMergedBuildRequests(self.brids)
+
     # subscription interface
 
     def subscribe(self, receiver, updateInterval=None):
