@@ -62,12 +62,6 @@ class FakeStatus(object):
     def build_started(self, brid, buildername, build_status):
         pass
 
-class FakeBuildRequestMerger(object):
-
-    def __init__(self, master):
-        self.master = master
-        self.build_merging_lock = defer.DeferredLock()
-
 class FakeBuilderStatus(object):
 
     def __init__(self, master=None):
@@ -131,7 +125,6 @@ class FakeMaster(object):
         self.botmaster.parent = self
         self.status = FakeStatus()
         self.status.master = self
-        self.buildrequest_merger = FakeBuildRequestMerger(master=self)
         self.locks = {}
         self.is_changing_services = None
 
