@@ -14,8 +14,11 @@
 # Copyright Buildbot Team Members
 
 import mock
-from buildbot.status.web import status_json
+
 from twisted.trial import unittest
+from twisted.web import resource
+
+from buildbot.status.web import status_json
 from buildbot.config import ProjectConfig
 from buildbot.status import master
 from buildbot.test.fake import fakemaster, fakedb
@@ -686,3 +689,77 @@ class TestAliveJsonResource(unittest.TestCase):
         '''
         alive_json = status_json.AliveJsonResource(None)
         self.assertEqual(alive_json.asDict(None), 1)
+
+
+class TestBuildRequestJsonResource(unittest.TestCase):
+
+    def setUp(self):
+        self.project = setUpProject()
+
+        self.master = setUpFakeMasterWithProjects(self.project, self)
+
+        self.master_status = setUpFakeMasterStatus(self.master)
+        self.master.status = self.master_status
+
+    def test_getChild_return_correct_resource_class_for_build_number_postpath(self):
+        build_request_resource = status_json.BuildRequestJsonResource(self.master_status)
+        build_request_id = 5
+        path = str(build_request_id)
+        request = mock.Mock(postpath=['build_number'])
+
+        child_resource = build_request_resource.getChild(path=path, request=request)
+
+        self.assertIsInstance(child_resource, status_json.BuildNumberForRequestJsonResource)
+        self.assertEqual(child_resource.build_request_id, build_request_id)
+
+    def test_getChild_invalid_build_number_in_path(self):
+        build_request_resource = status_json.BuildRequestJsonResource(self.master_status)
+        path = 'invalid_path'
+        request = mock.Mock(postpath=['build_number'])
+
+        child_resource = build_request_resource.getChild(path=path, request=request)
+
+        self.assertIsInstance(child_resource, resource.NoResource)
+        self.assertEqual(child_resource.detail, 'Invalid build request ID.')
+
+    def test_getChild_unknown_postpath(self):
+        build_request_resource = status_json.BuildRequestJsonResource(self.master_status)
+        build_request_id = 6
+        path = str(build_request_id)
+        request = mock.Mock(postpath=['unknown_path'])
+
+        child_resource = build_request_resource.getChild(path=path, request=request)
+
+        self.assertIsInstance(child_resource, resource.NoResource)
+        self.assertEqual(child_resource.detail, 'Resource not found.')
+
+
+class TestBuildNumberForRequestJsonResource(unittest.TestCase):
+
+    def setUp(self):
+        self.project = setUpProject()
+
+        self.master = setUpFakeMasterWithProjects(self.project, self)
+
+        self.master_status = setUpFakeMasterStatus(self.master)
+        self.master.status = self.master_status
+
+        self.request = mock.Mock()
+
+    @defer.inlineCallbacks
+    def test_asDict_returns_valid_value(self):
+        build_request_id = 100
+        request_build_number = 51
+
+        build_number_resource = status_json.BuildNumberForRequestJsonResource(
+            status=self.master_status, build_request_id=build_request_id,
+        )
+
+        with mock.patch.object(
+                self.master.db.builds,
+                'getBuildNumberForRequest',
+                new=mock.Mock(return_value=defer.succeed(request_build_number)),
+        ):
+            build_number = yield build_number_resource.asDict(request=self.request)
+
+        self.assertEqual(build_number, request_build_number)

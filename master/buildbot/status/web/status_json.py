@@ -125,6 +125,8 @@ EXAMPLES = """\
     - The current pending builds for a builder (Can be filtered by codebases)
   - /json/globalstatus/
     - Global information about the current builds and slaves in use
+  - /json/build_request/<BUILD_REQUEST_ID>/build_number/
+    - A build number for a build request id.
 """
 
 
@@ -1180,6 +1182,40 @@ class GlobalJsonResource(JsonResource):
         defer.returnValue(result)
 
 
+class BuildRequestJsonResource(JsonResource):
+    help = 'Gives information about build request'
+    pageTitle = 'BuildRequest Info'
+
+    def __init__(self, status):
+        JsonResource.__init__(self, status)
+
+    def getChild(self, path, request):
+        try:
+            build_request_id = int(path)
+        except (TypeError, ValueError):
+            return resource.NoResource('Invalid build request ID.')
+
+        if request.postpath and request.postpath[0] == 'build_number':
+            return BuildNumberForRequestJsonResource(self.status, build_request_id)
+        else:
+            return resource.NoResource('Resource not found.')
+
+
+class BuildNumberForRequestJsonResource(JsonResource):
+    help = 'Gives information about build number for build request.'
+    isLeaf = True
+    pageTitle = 'Build number for given build request'
+
+    def __init__(self, status, build_request_id):
+        JsonResource.__init__(self, status)
+        self.build_request_id = build_request_id
+
+    @defer.inlineCallbacks
+    def asDict(self, request):
+        build_number = yield self.status.master.db.builds.getBuildNumberForRequest(self.build_request_id)
+        defer.returnValue(build_number)
+
+
 class JsonStatusResource(JsonResource):
     """Retrieves all json data."""
     help = """JSON status
@@ -1204,6 +1240,7 @@ For help on any sub directory, use url /child/help
         self.putChild('buildqueue', QueueJsonResource(status))
         self.putChild('pending', PendingBuildsJsonResource(status))
         self.putChild('globalstatus', GlobalJsonResource(status))
+        self.putChild('build_request', BuildRequestJsonResource(status))
         # This needs to be called before the first HelpResource().body call.
         self.hackExamples()
 
@@ -1230,6 +1267,8 @@ For help on any sub directory, use url /child/help
             EXAMPLES = EXAMPLES.replace('<A_PROJECT>', projects[0])
         if build:
             EXAMPLES = EXAMPLES.replace('<A_BUILD>', str(build.getNumber()))
+        if build.brids:
+            EXAMPLES = EXAMPLES.replace('<BUILD_REQUEST_ID>', str(build.brids[0]))
         if builder.slavenames:
             EXAMPLES = EXAMPLES.replace('<A_SLAVE>', builder.slavenames[0])
 
