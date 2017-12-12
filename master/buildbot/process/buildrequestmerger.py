@@ -180,7 +180,8 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
             [brdict['buildsetid'] for brdict in matchingBrDicts])
 
         # Check if relevant properties match
-        for brdict in matchingBrDicts:
+        # Sort list of build requests to ensure we always merge against smallest id possible
+        for brdict in sorted(matchingBrDicts, key=lambda b: int(b['brid'])):
             if self._propertiesMatch(properties,
                                      otherProperties[brdict['buildsetid']],
                                      mergeProperties):

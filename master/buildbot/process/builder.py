@@ -561,7 +561,8 @@ class Builder(config.ReconfigurableServiceMixin,
         breqs = {br.id : br for br in build.requests}
 
         # Prevent new merged builds from coming in while we are finishing
-        build_merging_locks = self.master.buildrequest_merger.getMergingLocks(breqs.keys())
+        lock_keys = [int(brid) for brid in sorted(breqs.keys())]
+        build_merging_locks = self.master.buildrequest_merger.getMergingLocks(lock_keys)
         for lock in build_merging_locks:
             yield lock.acquire()
         locks_acquired_start = time.time()
