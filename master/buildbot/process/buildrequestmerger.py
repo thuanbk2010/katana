@@ -114,7 +114,7 @@ class BuildRequestMerger(config.ReconfigurableServiceMixin, service.Service):
         # Create a lock on every build being merged into
         acquiring_locks_start = time.time()
         build_merging_locks = {
-            builderName : self.getMergingLocks([brDict['id']])[0]
+            builderName : self.getMergingLocks([brDict['brid']])[0]
             for builderName, brDict in brDictsToMerge.iteritems()
         }
         for builderName, lock in build_merging_locks.iteritems():
