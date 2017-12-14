@@ -1306,31 +1306,28 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
         def thd(conn):
             build_request_tbl = self.db.model.buildrequests
             builds_tbl = self.db.model.builds
-            row_data = {}
 
-            result = conn.execute(
-                sa.select(
-                    columns=[build_request_tbl.c.buildername, builds_tbl.c.number],
-                    from_obj=[
-                        build_request_tbl.join(
-                            builds_tbl,
-                            build_request_tbl.c.id == builds_tbl.c.brid,
-                        ),
-                    ],
-                    whereclause=(build_request_tbl.c.id == build_chain_id),
-                    order_by=sa.desc(builds_tbl.c.number),
-                    limit=1,
-                    use_labels=True,
-                ),
+            query = sa.select(
+                columns=[build_request_tbl.c.buildername, builds_tbl.c.number],
+                from_obj=[
+                    build_request_tbl.join(
+                        builds_tbl,
+                        build_request_tbl.c.id == builds_tbl.c.brid,
+                    ),
+                ],
+                whereclause=(build_request_tbl.c.id == build_chain_id),
+                order_by=sa.desc(builds_tbl.c.number),
+                limit=1,
+                use_labels=True,
             )
 
-            row = result.fetchone()
+            result = conn.execute(query)
+            row = result.first()
+
             if row:
-                row_data = {'buildername': row['buildrequests_buildername'], 'build_number': row['builds_number']}
+                return {'buildername': row['buildrequests_buildername'], 'build_number': row['builds_number']}
 
-            result.close()
-
-            return row_data
+            return {}
 
         return self.db.pool.do(thd)
 
@@ -1342,7 +1339,7 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
                 columns=[sa.exists().where(build_request_tbl.c.mergebrid.in_(brids))],
             )
 
-            result, = conn.execute(query).fetchone()
+            result, = conn.execute(query).first()
 
             return bool(result)
 
