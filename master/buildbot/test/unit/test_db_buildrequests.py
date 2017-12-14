@@ -32,11 +32,11 @@ class TestBuildsetsConnectorComponent(
     # the epoch timestamp and datetime objects explicitly.  These should
     # pass regardless of the local timezone used while running tests!
     CLAIMED_AT = datetime(1978, 6, 15, 12, 31, 15, tzinfo=UTC)
-    CLAIMED_AT_EPOCH = 266761875
+    CLAIMED_AT_EPOCH = int(CLAIMED_AT.strftime('%s'))
     SUBMITTED_AT = datetime(1979, 6, 15, 12, 31, 15, tzinfo=UTC)
-    SUBMITTED_AT_EPOCH = 298297875
+    SUBMITTED_AT_EPOCH = SUBMITTED_AT.strftime('%s')
     COMPLETE_AT = datetime(1980, 6, 15, 12, 31, 15, tzinfo=UTC)
-    COMPLETE_AT_EPOCH = 329920275
+    COMPLETE_AT_EPOCH = int(COMPLETE_AT.strftime('%s'))
     BSID = 567
     BSID2 = 5670
     MASTER_ID = "set in setUp"
@@ -1498,7 +1498,7 @@ class TestBuildsetsConnectorComponent(
 
         result = yield self.db.buildrequests.getTopBuildData(build_chain_id)
 
-        assert result == {'buildername': buildername, 'build_number': build_number}
+        self.assertEqual(result, {'buildername': buildername, 'build_number': build_number})
 
     @defer.inlineCallbacks
     def test_getTopBuildData_build_chain_is_none(self):
