@@ -1357,7 +1357,7 @@ pre.code{padding-left:15px;white-space:pre-line;text-shadow:0 1px 0 #fff}
 div#slave-status{display:inline}
 div.label-div{overflow:hidden}
 div.label-div div{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.no-padding{padding:0!important}
+.no-padding{padding:0}
 .row-vertical-align{display:flex;align-items:center}
 .toast-title{font-weight:700}
 .toast-message{-ms-word-wrap:break-word;word-wrap:break-word}
