@@ -856,7 +856,7 @@ class BuilderConfig:
                 'name': key,
                 'url': value.format(
                         buildbotUrl=buildbotUrl,
-                        builderName=self.name,
+                        builderName=urllib.quote(self.name),
                         buildNumber=buildNumber,
                         buildUrl=buildUrl)
             })
