@@ -113,3 +113,8 @@ class TestForceAction(unittest.TestCase):
                 'forcescheduler arg not found, and could not find a default force scheduler for builderName',
             ),
         )
+
+    def test_decode_request_arguments(self):
+        self.request.addArg('checkbox', 'checkbox-selected')
+        args = ForceAction.decode_request_arguments(self.request)
+        self.assertEqual(args, {'checkbox-selected': True})
