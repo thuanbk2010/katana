@@ -12,8 +12,9 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Copyright Buildbot Team Members
-
+import mock
 import weakref
+
 from twisted.internet import defer
 from buildbot.test.fake import fakedb
 from buildbot.test.fake import fakebuild
@@ -21,8 +22,8 @@ from buildbot.test.fake import pbmanager
 from buildbot.test.fake.botmaster import FakeBotMaster
 from buildbot import config
 from buildbot.process import properties
-from buildbot.config import ProjectConfig
-import mock
+from buildbot.schedulers.manager import SchedulerManager
+
 
 class FakeCache(object):
     """Emulate an L{AsyncLRUCache}, but without any real caching.  This
@@ -33,6 +34,7 @@ class FakeCache(object):
 
     def get(self, key, **kwargs):
         d = self.miss_fn(key, **kwargs)
+
         def mkref(x):
             if x is not None:
                 weakref.ref(x)
@@ -55,12 +57,12 @@ class FakeStatus(object):
     def slaveConnected(self, name):
         pass
 
-
     def builderAdded(self, name, basedir, category=None, friendly_name=None, description=None, project=None):
         return FakeBuilderStatus(self.master)
 
     def build_started(self, brid, buildername, build_status):
         pass
+
 
 class FakeBuildRequestMerger(object):
 
@@ -74,10 +76,13 @@ class FakeBuildRequestMerger(object):
             for brid in build_request_ids
         ]
 
+
 class FakeBuilderStatus(object):
 
-    def __init__(self, master=None):
+    def __init__(self, master=None, buildername=None, project=None):
         self.master = master
+        self.project = project
+        self.name = buildername
 
     def setDescription(self, description):
         self._description = description
@@ -92,7 +97,13 @@ class FakeBuilderStatus(object):
         return self._category
 
     def setProject(self, project):
-        pass
+        self.project = project
+
+    def getProject(self):
+        return self.project
+
+    def getName(self):
+        return self.name
 
     def setSlavenames(self, names):
         pass
@@ -140,6 +151,7 @@ class FakeMaster(object):
         self.buildrequest_merger = FakeBuildRequestMerger(master=self)
         self.locks = {}
         self.is_changing_services = None
+        self.scheduler_manager = SchedulerManager(self)
 
     def getStatus(self):
         return self.status
@@ -167,6 +179,9 @@ class FakeMaster(object):
 
     def getProject(self, name):
         pass
+
+    def allSchedulers(self):
+        return list(self.scheduler_manager)
 
 
 # Leave this alias, in case we want to add more behavior later

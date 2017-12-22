@@ -74,7 +74,7 @@ class ForceAction(ActionResource):
                 break
 
         # send the user back to the proper page
-        returnpage = args.get("returnpage", None)
+        returnpage = args.get("returnpage", {})
         if  "builders" in returnpage:
             defer.returnValue((path_to_builders(req, self.builder_status.getProject())))
         elif "builders_json" in returnpage:
