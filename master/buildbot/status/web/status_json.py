@@ -17,17 +17,19 @@
 """Simple JSON exporter."""
 
 import datetime
+import json
 import re
-from twisted.python import log
+import time
 
+import jsonschema
+from twisted.python import log
 from twisted.internet import defer
 from twisted.web import html, resource, server
 
+from buildbot.schedulers.forcesched import ForceScheduler
 from buildbot.status.buildrequest import BuildRequestStatus
-from buildbot.status.web.base import HtmlResource, path_to_root, map_branches, getCodebasesArg, \
+from buildbot.status.web.base import AccessorMixin, HtmlResource, path_to_root, map_branches, getCodebasesArg, \
     getRequestCharset, getResultsArg, getCodebases, path_to_comparison
-import json
-import time
 
 
 _IS_INT = re.compile(r'^[-+]?\d+$')
@@ -434,29 +436,92 @@ class BuilderPendingBuildsJsonResource(JsonResource):
 
 
 class BuilderJsonResource(JsonResource):
-    help = """Describe a single builder.
-"""
+    help = 'Describe a single builder.'
     pageTitle = 'Builder'
 
     def __init__(self, status, builder_status):
         JsonResource.__init__(self, status)
         self.builder_status = builder_status
         self.putChild('builds', BuildsJsonResource(status, builder_status))
-        self.putChild('slaves', BuilderSlavesJsonResources(status,
-                                                           builder_status))
-        self.putChild('startslaves', BuilderStartSlavesJsonResources(status,
-                                                           builder_status))
-        self.putChild(
-            'pendingBuilds',
-            BuilderPendingBuildsJsonResource(status, builder_status))
+        self.putChild('slaves', BuilderSlavesJsonResources(status, builder_status))
+        self.putChild('startslaves', BuilderStartSlavesJsonResources(status, builder_status))
+        self.putChild('pendingBuilds', BuilderPendingBuildsJsonResource(status, builder_status))
+        self.putChild('start-build', StartNewBuildJsonResource(status, builder_status))
 
     def asDict(self, request):
         # buildbot.status.builder.BuilderStatus
-        builder_dict = self.builder_status.asDict_async(codebases=getCodebases(request=request),
-                                                        request=request)
+        builder_dict = self.builder_status.asDict_async(
+            codebases=getCodebases(request=request), request=request,
+        )
 
         return builder_dict
 
+
+class StartNewBuildJsonResource(AccessorMixin, resource.Resource):
+    help = 'Start a new build'
+    isLeaf = True
+    pageTitle = 'Start a new build'
+    schema = {
+        'type': 'object',
+        'properties': {
+            'scheduler_name': {'type': 'string'},
+            'owner': {'type': 'string'},
+        },
+        'required': ['scheduler_name',  'owner']
+    }
+
+    def __init__(self, status, builder_status):
+        resource.Resource.__init__(self)
+        self.level = 1
+        self.status = status
+        self.builder_status = builder_status
+
+    def render_POST(self, request):
+        d = self._deferred_render(request)
+
+        def request_succeed(data):
+            request.setHeader('content-type', 'application/json')
+            data = json.dumps(data)
+            request.write(data)
+            request.finish()
+
+        def request_failed(f):
+            log.err(f, 'Connection from {} lost'.format(request.client.host))
+
+        d.addCallback(request_succeed)
+        request.notifyFinish().addErrback(request_failed)
+
+        return server.NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _deferred_render(self, request):
+        request_data = json.load(request.content)
+
+        try:
+            jsonschema.validate(instance=request_data, schema=self.schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            request.setResponseCode(400)
+            import epdb; epdb.serve(4242)
+            defer.returnValue(str(exc))
+
+        master = self.getBuildmaster(request)
+
+        if 'scheduler_name' in request_data:
+            scheduler = master.scheduler_manager.findSchedulerByName(request_data['scheduler_name'])
+        else:
+            scheduler = master.scheduler_manager.findSchedulerByBuilderName(
+                self.builder_status.name, scheduler_type=ForceScheduler,
+            )
+
+        owner = self.getAuthz(request).getUsernameFull(request)
+
+        result = yield scheduler.force(owner, [self.builder_status.name], **request_data)
+
+        if isinstance(result, list):
+            defer.returnValue({})
+
+        build_request_id = result[0]
+        defer.returnValue({'build_request_id': build_request_id})
 
 
 class BuildersJsonResource(JsonResource):
