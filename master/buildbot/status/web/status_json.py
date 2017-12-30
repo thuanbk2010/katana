@@ -446,7 +446,7 @@ class BuilderJsonResource(JsonResource):
         self.putChild('slaves', BuilderSlavesJsonResources(status, builder_status))
         self.putChild('startslaves', BuilderStartSlavesJsonResources(status, builder_status))
         self.putChild('pendingBuilds', BuilderPendingBuildsJsonResource(status, builder_status))
-        self.putChild('start-build', StartNewBuildJsonResource(status, builder_status))
+        self.putChild('start-build', StartBuildJsonResource(status, builder_status))
 
     def asDict(self, request):
         # buildbot.status.builder.BuilderStatus
@@ -457,17 +457,33 @@ class BuilderJsonResource(JsonResource):
         return builder_dict
 
 
-class StartNewBuildJsonResource(AccessorMixin, resource.Resource):
+class StartBuildJsonResource(AccessorMixin, resource.Resource):
     help = 'Start a new build'
     isLeaf = True
     pageTitle = 'Start a new build'
     schema = {
         'type': 'object',
         'properties': {
-            'scheduler_name': {'type': 'string'},
+            'force_chain_rebuild': {'type': 'boolean'},
+            'force_rebuild': {'type': 'boolean'},
             'owner': {'type': 'string'},
+            'priority': {'type': 'string', 'pattern': r'^\d+$'},
+            'scheduler_name': {'type': 'string', 'pattern': r'^\S+ (\[force\])$'},
+            'selected_slave': {'type': 'string'},
+            'sources_stamps': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'branch': {'type': 'string'},
+                        'repository': {'type': 'string'},
+                        'revision': {'type': 'string'},
+                    },
+                    'required': ['branch', 'repository', 'revision'],
+                },
+            },
         },
-        'required': ['scheduler_name',  'owner']
+        'required': ['owner'],
     }
 
     def __init__(self, status, builder_status):
@@ -501,7 +517,6 @@ class StartNewBuildJsonResource(AccessorMixin, resource.Resource):
             jsonschema.validate(instance=request_data, schema=self.schema)
         except jsonschema.exceptions.ValidationError as exc:
             request.setResponseCode(400)
-            import epdb; epdb.serve(4242)
             defer.returnValue(str(exc))
 
         master = self.getBuildmaster(request)
@@ -513,8 +528,10 @@ class StartNewBuildJsonResource(AccessorMixin, resource.Resource):
                 self.builder_status.name, scheduler_type=ForceScheduler,
             )
 
-        owner = self.getAuthz(request).getUsernameFull(request)
+        sources_stamps = request_data.pop('sources_stamps', [])
+        request_data.update(self._convert_sources_stamps(sources_stamps))
 
+        owner = request_data.pop('owner')
         result = yield scheduler.force(owner, [self.builder_status.name], **request_data)
 
         if isinstance(result, list):
@@ -522,6 +539,20 @@ class StartNewBuildJsonResource(AccessorMixin, resource.Resource):
 
         build_request_id = result[0]
         defer.returnValue({'build_request_id': build_request_id})
+
+    @staticmethod
+    def _convert_sources_stamps(sources_stamps):
+        converted_sources_stamps = {}
+
+        for source_stamp in sources_stamps:
+            repository = source_stamp['repository']
+            revision = source_stamp['revision']
+            branch = source_stamp['branch']
+
+            converted_sources_stamps['{}_{}'.format(repository, revision)] = revision
+            converted_sources_stamps['{}_{}'.format(repository, branch)] = branch
+
+        return converted_sources_stamps
 
 
 class BuildersJsonResource(JsonResource):
