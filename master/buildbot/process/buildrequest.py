@@ -14,6 +14,8 @@
 # Copyright Buildbot Team Members
 
 import calendar
+import json
+import time
 from zope.interface import implements
 from twisted.python import log
 from twisted.internet import defer
@@ -258,30 +260,50 @@ class BuildRequest(object):
 
     @defer.inlineCallbacks
     def cancelBuildRequest(self):
-        # first, try to claim the request; if this fails, then it's too late to
-        # cancel the build anyway
+        buildCancelLog = {
+            'name': 'cancelBuildRequest',
+            'description': 'Called when a Build Request is cancelled',
+            'brid': self.id,
+        }
+        start = time.time()
 
-        if self.results == RESUME:
-            yield self.master.db.buildrequests.cancelResumeBuildRequest(self.id)
-        else:
-            try:
-                yield self.master.db.buildrequests.claimBuildRequests([self.id])
-            except buildrequests.AlreadyClaimedError:
-                log.msg("build request already claimed; cannot cancel")
-                return
+        # Prevent new merged builds from coming in while we are cancelling
+        build_merging_locks = self.master.buildrequest_merger.getMergingLocks([self.id])
+        for lock in build_merging_locks:
+            yield lock.acquire()
+        locks_acquired_start = time.time()
+        buildCancelLog['elapsed_acquiring_locks'] = time.time() - start
 
-            # then complete it with 'FAILURE'; this is the closest we can get to
-            # cancelling a request without running into trouble with dangling
-            # references.
-            yield self.master.db.buildrequests.completeBuildRequests([self.id],
-                                                                    CANCELED)
+        try:
+            # first, try to claim the request; if this fails, then it's too late to
+            # cancel the build anyway
+            if self.results == RESUME:
+                yield self.master.db.buildrequests.cancelResumeBuildRequest(self.id)
+            else:
+                try:
+                    yield self.master.db.buildrequests.claimBuildRequests([self.id])
+                except buildrequests.AlreadyClaimedError:
+                    log.msg("build request already claimed; cannot cancel")
+                    return
 
-        # and let the master know that the enclosing buildset may be complete
-        yield self.master.maybeBuildsetComplete(self.bsid)
+                # then complete it with 'FAILURE'; this is the closest we can get to
+                # cancelling a request without running into trouble with dangling
+                # references.
+                yield self.master.db.buildrequests.completeBuildRequests([self.id],
+                                                                        CANCELED)
 
-        # now let the master know it should inform its subscribers that the build
-        # was cancelled
-        self.master.buildRequestRemoved(self.bsid, self.id, self.buildername)
+            # and let the master know that the enclosing buildset may be complete
+            yield self.master.maybeBuildsetComplete(self.bsid)
+
+            # now let the master know it should inform its subscribers that the build
+            # was cancelled
+            self.master.buildRequestRemoved(self.bsid, self.id, self.buildername)
+        finally:
+            for lock in build_merging_locks:
+                yield lock.release()
+                buildCancelLog['elapsed_using_locks'] = time.time() - locks_acquired_start
+            log.msg(json.dumps(buildCancelLog))
+
 
 class BuildRequestControl:
     implements(interfaces.IBuildRequestControl)
