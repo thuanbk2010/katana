@@ -517,7 +517,7 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
             jsonschema.validate(instance=request_data, schema=self.schema)
         except jsonschema.exceptions.ValidationError as exc:
             request.setResponseCode(400)
-            defer.returnValue(str(exc))
+            defer.returnValue({'error': exc.message})
 
         master = self.getBuildmaster(request)
 
@@ -531,14 +531,22 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
         sources_stamps = request_data.pop('sources_stamps', [])
         request_data.update(self._convert_sources_stamps(sources_stamps))
 
-        owner = request_data.pop('owner')
-        result = yield scheduler.force(owner, [self.builder_status.name], **request_data)
-
-        if isinstance(result, list):
-            defer.returnValue({})
-
-        build_request_id = result[0]
-        defer.returnValue({'build_request_id': build_request_id})
+        try:
+            owner = request_data.pop('owner')
+            scheduler_output = yield scheduler.force(owner, [self.builder_status.name], **request_data)
+        except AttributeError:
+            request.setResponseCode(404)
+            defer.returnValue({'error': 'Scheduler not found'})
+        else:
+            if isinstance(scheduler_output, tuple):
+                build_set_id, build_request = scheduler_output
+                defer.returnValue([{'build_request_id': build_request[self.builder_status.name]}])
+            else:
+                result = []
+                for d in scheduler_output:
+                    build_set_id, build_request = yield d
+                    result.append({'build_request_id': build_request[self.builder_status.name]})
+                defer.returnValue(result)
 
     @staticmethod
     def _convert_sources_stamps(sources_stamps):
