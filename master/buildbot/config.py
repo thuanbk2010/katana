@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import warnings
+import urllib
 from buildbot.util import safeTranslate
 from buildbot import interfaces
 from buildbot import locks
@@ -855,7 +856,7 @@ class BuilderConfig:
                 'name': key,
                 'url': value.format(
                         buildbotUrl=buildbotUrl,
-                        builderName=self.name,
+                        builderName=urllib.quote(self.name),
                         buildNumber=buildNumber,
                         buildUrl=buildUrl)
             })
