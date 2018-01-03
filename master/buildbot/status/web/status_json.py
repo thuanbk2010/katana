@@ -1197,8 +1197,8 @@ class BuildRequestJsonResource(JsonResource):
 
         if request.postpath and request.postpath[0] == 'build_number':
             return BuildNumberForRequestJsonResource(self.status, build_request_id)
-        else:
-            return resource.NoResource('Resource not found.')
+
+        return resource.NoResource('Resource not found.')
 
 
 class BuildNumberForRequestJsonResource(JsonResource):
