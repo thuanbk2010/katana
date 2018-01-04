@@ -798,15 +798,6 @@ class TestStartBuildJsonResource(unittest.TestCase):
             self.master.status, self.builder_status,
         )
 
-    @staticmethod
-    def _scheduler_factory(spec, **kwargs):
-        scheduler = mock.Mock(spec=spec)
-
-        for attribute, value in kwargs.items():
-            setattr(scheduler, attribute, value)
-
-        return scheduler
-
     def test_convert_sources_stamps(self):
         sources_stamps = [
             {
@@ -835,11 +826,11 @@ class TestStartBuildJsonResource(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_start_new_build_single_slave(self):
-        force_scheduler = self._scheduler_factory(
-            ForceScheduler,
-            name='force-scheduler-0 [force]',
+        force_scheduler = mock.Mock(
+            spec=ForceScheduler,
             force=mock.Mock(return_value=(1, {self.builder_status.name: 2})),
         )
+        force_scheduler.name = 'force-scheduler-0 [force]'
         self.master.scheduler_manager.addService(force_scheduler)
 
         build_params = {
@@ -873,14 +864,14 @@ class TestStartBuildJsonResource(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_start_new_build_multiple_slaves(self):
-        force_scheduler = self._scheduler_factory(
-            ForceScheduler,
-            name='force-scheduler-0 [force]',
+        force_scheduler = mock.Mock(
+            spec=ForceScheduler,
             force=mock.Mock(return_value=[
                 (1, {self.builder_status.name: 2}),
                 (2, {self.builder_status.name: 4}),
             ]),
         )
+        force_scheduler.name = 'force-scheduler-0 [force]'
         self.master.scheduler_manager.addService(force_scheduler)
 
         build_params = {
@@ -986,6 +977,8 @@ class TestStartBuildJsonResource(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_scheduler_not_found(self):
+        self.master.scheduler_manager.services = []
+
         build_params = {
             'force_chain_rebuild': True,
             'force_rebuild': True,
