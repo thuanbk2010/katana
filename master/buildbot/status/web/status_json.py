@@ -483,6 +483,7 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
                 },
             },
         },
+        'additionalProperties': False,
         'required': ['owner'],
     }
 
@@ -511,6 +512,7 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
 
     @defer.inlineCallbacks
     def _deferred_render(self, request):
+        master = self.getBuildmaster(request)
         request_data = json.load(request.content)
 
         try:
@@ -518,8 +520,6 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
         except jsonschema.exceptions.ValidationError as exc:
             request.setResponseCode(400)
             defer.returnValue({'error': exc.message})
-
-        master = self.getBuildmaster(request)
 
         if 'scheduler_name' in request_data:
             scheduler = master.scheduler_manager.findSchedulerByName(request_data['scheduler_name'])
@@ -557,8 +557,8 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
             revision = source_stamp['revision']
             branch = source_stamp['branch']
 
-            converted_sources_stamps['{}_{}'.format(repository, revision)] = revision
-            converted_sources_stamps['{}_{}'.format(repository, branch)] = branch
+            converted_sources_stamps['{}_revision'.format(repository)] = revision
+            converted_sources_stamps['{}_branch'.format(repository)] = branch
 
         return converted_sources_stamps
 
