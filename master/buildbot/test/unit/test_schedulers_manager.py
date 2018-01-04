@@ -190,28 +190,23 @@ class SchedulerManager(unittest.TestCase):
     def test_finding_scheduler_by_builder_name(self):
         scheduler_manager = manager.SchedulerManager(self.master)
 
-        first_scheduler = mock.Mock(spec=self.Sched)
-        first_scheduler.builderNames = ['builder_a', 'builder_b']
+        first_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_a', 'builder_b'])
         scheduler_manager.addService(first_scheduler)
 
-        second_scheduler = mock.Mock(spec=self.Sched)
-        second_scheduler.builderNames = ['builder_c', 'builder_d']
+        second_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_c', 'builder_d'])
         scheduler_manager.addService(second_scheduler)
 
         self.assertEqual(scheduler_manager.findSchedulerByBuilderName('builder_c'), second_scheduler)
 
     def test_finding_scheduler_by_builder_name_filter_by_scheduler_type(self):
-        class Sched2(base.BaseScheduler):
-            pass
+        fake_scheduler_type = type('FakeScheduler', (base.BaseScheduler, ), {})
 
         scheduler_manager = manager.SchedulerManager(self.master)
 
-        first_scheduler = mock.Mock(spec=self.Sched)
-        first_scheduler.builderNames = ['builder_a', 'builder_b']
+        first_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_a', 'builder_b'])
         scheduler_manager.addService(first_scheduler)
 
-        second_scheduler = mock.Mock(spec=Sched2)
-        second_scheduler.builderNames = ['builder_b', 'builder_c']
+        second_scheduler = mock.Mock(spec=fake_scheduler_type, builderNames=['builder_b', 'builder_c'])
         scheduler_manager.addService(second_scheduler)
 
         self.assertEqual(
@@ -220,6 +215,6 @@ class SchedulerManager(unittest.TestCase):
         )
 
         self.assertEqual(
-            scheduler_manager.findSchedulerByBuilderName('builder_b', scheduler_type=Sched2),
+            scheduler_manager.findSchedulerByBuilderName('builder_b', scheduler_type=fake_scheduler_type),
             second_scheduler,
         )
