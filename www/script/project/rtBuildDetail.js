@@ -43,9 +43,11 @@ define(function (require) {
 
             // Setup dialog for stop entire chain
             $("form[data-stop-chain]").ajaxForm({
-                beforeSubmit: function beforeSubmit() {
-                    return confirm('This will cancel all builds in this chain, a process which could take quite a few seconds. \n\nAre you sure ' +
-                    'you want to continue?');
+                beforeSubmit: function beforeSubmit(data, $form) {
+                    var chainBuild = $form.data("chain").toString().split(';');
+                    return confirm('This will cancel all builds in this chain, a process which could take quite a few seconds.' +
+                                   '\nThose builds may be canceled also: \n\n' + chainBuild.join('\n') +
+                                   '\n\nAre you sure you want to continue?');
 
                 }
             });

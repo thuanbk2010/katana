@@ -378,6 +378,10 @@ class StatusResourceBuild(HtmlResource):
                                             "stepStarted": filters,
                                             "stepFinished": filters,
                                         }}
+        # Retrive build chain
+        cxt['chained_build'] = yield req.site.buildbot_service.master.db.buildrequests.getBuildChain(
+            self.build_status.buildChainID,
+        )
 
         template = req.site.buildbot_service.templates.get_template("build.html")
         defer.returnValue(template.render(**cxt))
