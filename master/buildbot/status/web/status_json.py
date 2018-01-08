@@ -129,6 +129,44 @@ EXAMPLES = """\
     - Global information about the current builds and slaves in use
   - /json/build_request/<BUILD_REQUEST_ID>/build_number/
     - A build number for a build request id.
+  - /json/builders/<A_BUILDER>/start-build/
+    - Start a new build. This endpoint accepts only POST method with the JSON payload.
+    
+    - Example payload:
+    
+    - {
+    
+    -    "force_chain_rebuild": true,
+    
+    -    "force_rebuild": true,
+    
+    -    "owner": pyflakes pyflakes <pyflakes@example.com>, 
+    # (Field required)
+    -    "priority": "50",
+    
+    -    "scheduler_name": "scheduler [force]", 
+    # (if not provided then the first force scheduler for given builder will be chosen)
+    -    "selected_slave": "slave_name",
+    # ('allCompatible' means that build will run on all slaves)
+    -    "sources_stamps": [{
+    
+    -        "branch": "test-branch",
+    
+    -        "repository": "test-repository",
+    
+    -        "revision": "5abcde"
+    
+    -    }]
+    
+    - }
+
+    - This endpoint will return the one element list of build request objects,
+if 'allCompatible' was used then the list will contain build request object for all slaves.
+
+    - Example:
+    
+    - [{"build_request_id": 1}] 
+>>>>>>> 105619308... added documentation for endpoint
 """
 
 
