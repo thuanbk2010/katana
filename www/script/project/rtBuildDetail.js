@@ -45,8 +45,8 @@ define(function (require) {
             $("form[data-stop-chain]").ajaxForm({
                 beforeSubmit: function beforeSubmit(data, $form) {
                     var chainBuild = $form.data("chain").toString().split(';');
-                    return confirm('This will cancel all builds in this chain, a process which could take quite a few seconds.' +
-                                   '\nThose builds may be canceled also: \n\n' + chainBuild.join('\n') +
+                    return confirm('This will cancel all builds in this chain, which may take a little while.' +
+                                   '\nThese builds will also be affected: \n\n' + chainBuild.join('\n') +
                                    '\n\nAre you sure you want to continue?');
 
                 }
