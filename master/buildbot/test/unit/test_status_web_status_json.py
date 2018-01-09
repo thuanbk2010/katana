@@ -18,14 +18,10 @@ from StringIO import StringIO
 
 import mock
 
-<<<<<<< HEAD
-from twisted.trial import unittest
-from twisted.web import resource
-=======
 from twisted.internet import defer
 from twisted.trial import unittest
+from twisted.web import resource
 from twisted.web.test.requesthelper import DummyRequest
->>>>>>> 2e6716581... added missing unit tests
 
 from buildbot.status.web import status_json
 from buildbot.config import ProjectConfig
