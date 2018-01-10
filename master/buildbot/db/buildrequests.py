@@ -847,7 +847,7 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
             buildrequests_tbl = self.db.model.buildrequests
             builds_tbl = self.db.model.builds
 
-            where_clouse = [
+            where_clause = [
                 buildrequests_tbl.c.id == brid,
                 buildrequests_tbl.c.startbrid == brid,
                 buildrequests_tbl.c.mergebrid == brid,
@@ -855,7 +855,7 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
             stmt_br = sa.select(
                 [buildrequests_tbl.c.id, buildrequests_tbl.c.buildername, builds_tbl.c.number, buildrequests_tbl.c.mergebrid],
                 from_obj=builds_tbl.join(buildrequests_tbl, builds_tbl.c.brid == buildrequests_tbl.c.id)
-            ).where(sa.or_(*where_clouse)) \
+            ).where(sa.or_(*where_clause)) \
              .distinct(buildrequests_tbl.c.id) \
              .order_by(buildrequests_tbl.c.id)
 
