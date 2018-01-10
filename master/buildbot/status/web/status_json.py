@@ -165,8 +165,7 @@ if 'allCompatible' was used then the list will contain build request object for 
 
     - Example:
     
-    - [{"build_request_id": 1}] 
->>>>>>> 105619308... added documentation for endpoint
+    - [{"build_request_id": 1}]
 """
 
 
