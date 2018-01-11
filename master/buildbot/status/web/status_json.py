@@ -17,7 +17,6 @@
 """Simple JSON exporter."""
 
 import datetime
-import itertools
 import json
 import re
 import time
@@ -136,15 +135,9 @@ EXAMPLES = """\
     - Example payload:
     
     - {
-    
-    -    "force_chain_rebuild": true,
-    
-    -    "force_rebuild": true,
-    
+
     -    "owner": pyflakes pyflakes <pyflakes@example.com>, 
     # (Field required)
-    -    "priority": "50",
-    
     -    "scheduler_name": "scheduler [force]", 
     # (if not provided then the first force scheduler for given builder will be chosen)
     -    "selected_slave": "slave_name",
@@ -157,7 +150,17 @@ EXAMPLES = """\
     
     -        "revision": "5abcde"
     
-    -    }]
+    -    }],
+    
+    -   "build_properties": {
+    
+    -       "force_chain_rebuild": true,
+    
+    -       "force_rebuild": true,
+
+    -       "priority": "50",
+    
+    -       "reason": "description"
     
     - }
 
@@ -166,7 +169,7 @@ if 'allCompatible' was used then the list will contain build request object for 
 
     - Example:
     
-    - [{"build_request_id": 1}]
+    - [{"build_request_id": 1}] or with 'allCompatible' [{"build_request_id": 1}, {"build_request_id": 2}]
 """
 
 
