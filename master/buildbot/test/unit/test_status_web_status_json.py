@@ -829,17 +829,24 @@ class TestStartBuildJsonResource(unittest.TestCase):
         force_scheduler.name = 'force-scheduler-0 [force]'
         self.master.scheduler_manager.addService(force_scheduler)
 
+
+
         build_params = {
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
             'owner': 'Test User <test.user@example.com>',
-            'priority': '50',
             'scheduler_name': 'force-scheduler-0 [force]',
-            'sources_stamps': [{
-                'repository': 'test_repository',
-                'branch': 'test_branch',
-                'revision': '59b7f8c59',
-            }],
+            'sources_stamps': [
+                {
+                    'repository': 'test_repository',
+                    'branch': 'test_branch',
+                    'revision': '59b7f8c59',
+                },
+            ],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+                'reason': 'test-reason',
+            },
         }
         self.request.content = StringIO(json.dumps(build_params))
 
@@ -853,6 +860,7 @@ class TestStartBuildJsonResource(unittest.TestCase):
             force_chain_rebuild=True,
             force_rebuild=True,
             priority='50',
+            reason='test-reason',
             scheduler_name='force-scheduler-0 [force]',
             test_repository_branch='test_branch',
             test_repository_revision='59b7f8c59',
@@ -871,10 +879,7 @@ class TestStartBuildJsonResource(unittest.TestCase):
         self.master.scheduler_manager.addService(force_scheduler)
 
         build_params = {
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
             'owner': 'Test User <test.user@example.com>',
-            'priority': '50',
             'scheduler_name': 'force-scheduler-0 [force]',
             'selected_slave': 'allCompatible',
             'sources_stamps': [{
@@ -882,6 +887,11 @@ class TestStartBuildJsonResource(unittest.TestCase):
                 'branch': 'test_branch',
                 'revision': '59b7f8c59',
             }],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+            },
         }
         self.request.content = StringIO(json.dumps(build_params))
 
@@ -906,16 +916,18 @@ class TestStartBuildJsonResource(unittest.TestCase):
         invalid_build_params = {
             'invalid_property': 'invalid_property_value',
 
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
             'owner': 'Test User <test.user@example.com>',
-            'priority': '50',
             'scheduler_name': 'force-scheduler-0 [force]',
             'sources_stamps': [{
                 'repository': 'test_repository',
                 'branch': 'test_branch',
                 'revision': '59b7f8c59',
             }],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+            },
         }
         self.request.content = StringIO(json.dumps(invalid_build_params))
 
@@ -930,9 +942,6 @@ class TestStartBuildJsonResource(unittest.TestCase):
     @defer.inlineCallbacks
     def test_input_schema_validation_owner_property_required(self):
         missing_owner_build_params = {
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
-            'priority': '50',
             'scheduler_name': 'force-scheduler-0 [force]',
             'sources_stamps': [{
                 'repository': 'test_repository',
@@ -955,11 +964,7 @@ class TestStartBuildJsonResource(unittest.TestCase):
         invalid_type_of_sources_stamps_params = {
             'sources_stamps': {
             },
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
-            'priority': '50',
             'owner': 'Test User <test_user@example.com>',
-            'scheduler_name': 'force-scheduler-0 [force]',
         }
         self.request.content = StringIO(json.dumps(invalid_type_of_sources_stamps_params))
 
@@ -976,10 +981,7 @@ class TestStartBuildJsonResource(unittest.TestCase):
         self.master.scheduler_manager.services = []
 
         build_params = {
-            'force_chain_rebuild': True,
-            'force_rebuild': True,
             'owner': 'Test User <test.user@example.com>',
-            'priority': '50',
             'scheduler_name': 'force-scheduler-0 [force]',
             'sources_stamps': [{
                 'repository': 'test_repository',
@@ -993,3 +995,14 @@ class TestStartBuildJsonResource(unittest.TestCase):
 
         self.assertEqual(self.request.responseCode, 404)
         self.assertDictEqual(response, {'error': 'Scheduler not found'})
+
+
+    @defer.inlineCallbacks
+    def test_invalid_json_in_payload(self):
+        invalid_json_param = '{"owner": "Test User <test.user@example.com>",}'
+        self.request.content = StringIO(invalid_json_param)
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 400)
+        self.assertDictEqual(response, {'error': 'invalid json payload'})

@@ -17,6 +17,7 @@
 """Simple JSON exporter."""
 
 import datetime
+import itertools
 import json
 import re
 import time
@@ -501,10 +502,7 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
     schema = {
         'type': 'object',
         'properties': {
-            'force_chain_rebuild': {'type': 'boolean'},
-            'force_rebuild': {'type': 'boolean'},
             'owner': {'type': 'string'},
-            'priority': {'type': 'string', 'pattern': r'^\d+$'},
             'scheduler_name': {'type': 'string', 'pattern': r'^\S+ (\[force\])$'},
             'selected_slave': {'type': 'string'},
             'sources_stamps': {
@@ -519,6 +517,9 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
                     'required': ['branch', 'repository', 'revision'],
                 },
             },
+            'build_properties': {
+                'type': 'object',
+            }
         },
         'additionalProperties': False,
         'required': ['owner'],
@@ -550,7 +551,12 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
     @defer.inlineCallbacks
     def _deferred_render(self, request):
         master = self.getBuildmaster(request)
-        request_data = json.load(request.content)
+
+        try:
+            request_data = json.load(request.content)
+        except ValueError:
+            request.setResponseCode(400)
+            defer.returnValue({'error': 'invalid json payload'})
 
         try:
             jsonschema.validate(instance=request_data, schema=self.schema)
@@ -570,6 +576,9 @@ class StartBuildJsonResource(AccessorMixin, resource.Resource):
 
         try:
             owner = request_data.pop('owner')
+            build_properties = request_data.pop('build_properties', {})
+            request_data.update(build_properties)
+
             scheduler_output = yield scheduler.force(owner, [self.builder_status.name], **request_data)
         except AttributeError:
             request.setResponseCode(404)
