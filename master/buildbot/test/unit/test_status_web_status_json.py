@@ -996,7 +996,6 @@ class TestStartBuildJsonResource(unittest.TestCase):
         self.assertEqual(self.request.responseCode, 404)
         self.assertDictEqual(response, {'error': 'Scheduler not found'})
 
-
     @defer.inlineCallbacks
     def test_invalid_json_in_payload(self):
         invalid_json_param = '{"owner": "Test User <test.user@example.com>",}'
