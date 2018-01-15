@@ -1238,6 +1238,33 @@ class BuilderConfig(ConfigErrorsMixin, unittest.TestCase):
             self.assertTrue(link['name'] in customBuildUrls)
             self.assertEquals(expectedLinks[link['name']], link['url'])
 
+    def test_customBuildUrlsWithSpecialCharacters(self):
+        customBuildUrls={
+            'Open My Tests Tool':
+                "http://tool.com/Build/View?katanaUrl={buildbotUrl}"
+                "&builderName={builderName}&buildNumber={buildNumber}&buildUrl={buildUrl}",
+            'name': 'url2'
+        }
+
+        cfg = config.BuilderConfig(
+                name='builder + il2cpp',
+                slavename='s1',
+                project="project",
+                factory=self.factory,
+                customBuildUrls=customBuildUrls
+        )
+
+        expectedLinks = {
+            'Open My Tests Tool': 'http://tool.com/Build/View?katanaUrl=test&builderName=builder%20%2B%20il2cpp&buildNumber=1'
+                                  '&buildUrl=http://buildbot.com/build/1',
+            'name': 'url2'
+        }
+
+        for link in cfg.getCustomBuildUrls(buildbotUrl="test", buildNumber=1, buildUrl="http://buildbot.com/build/1"):
+            self.assertTrue('name' in link and 'url' in link)
+            self.assertTrue(link['name'] in customBuildUrls)
+            self.assertEquals(expectedLinks[link['name']], link['url'])
+
     def test_customBuildUrlsFails(self):
         customBuildUrls={
             'Open My Tests Tool': "http://tool.com/Build/View?builderName={builderName}&buildNumber={buildNumber}",
