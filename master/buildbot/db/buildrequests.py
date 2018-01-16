@@ -836,6 +836,46 @@ class BuildRequestsConnectorComponent(base.DBConnectorComponent):
 
         return self.db.pool.do(thd)
 
+    def getBuildChain(self, brid):
+        """ This method return promise with chained build
+        :param brid: identification of build request
+        :type brid: int
+
+        :return: promise with list of dictionaries with id of build request, builder name and build number
+        """
+        def thd(conn):
+            buildrequests_tbl = self.db.model.buildrequests
+            builds_tbl = self.db.model.builds
+
+            where_clause = [
+                buildrequests_tbl.c.id == brid,
+                buildrequests_tbl.c.startbrid == brid,
+                buildrequests_tbl.c.mergebrid == brid,
+            ]
+            stmt_br = sa.select(
+                [buildrequests_tbl.c.id, buildrequests_tbl.c.buildername, builds_tbl.c.number, buildrequests_tbl.c.mergebrid],
+                from_obj=builds_tbl.join(buildrequests_tbl, builds_tbl.c.brid == buildrequests_tbl.c.id)
+            ).where(sa.or_(*where_clause)) \
+             .distinct(buildrequests_tbl.c.id) \
+             .order_by(buildrequests_tbl.c.id)
+
+            res = conn.execute(stmt_br)
+            rows = res.fetchall()
+            buildrequests = []
+            for row in rows:
+                merged = "( merged )" if row.mergebrid else ""
+                buildrequest = dict(
+                    id=row.id,
+                    buildername=str(row.buildername),
+                    number=row.number,
+                    is_merged=bool(row.mergebrid),
+                    full_name="{buildername} #{number} {merged}".format(merged=merged, **row),
+                )
+                buildrequests.append(buildrequest)
+            return buildrequests
+
+        return self.db.pool.do(thd)
+
     def getBuildRequestsTriggeredByScheduler(self, schedulername, stepname, triggeredbybrid):
         def thd(conn):
             buildrequests_tbl = self.db.model.buildrequests

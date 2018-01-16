@@ -1416,6 +1416,60 @@ class TestBuildsetsConnectorComponent(
         self.assertTrue(len(result) == 1)
         self.assertTrue(result[0]['brid'] ==  2)
 
+    @defer.inlineCallbacks
+    def test_getBuildChain(self):
+        breqs = [
+            # I Case - Two childs
+            fakedb.BuildRequest(id=1, buildsetid=1, buildername="bldr1", priority=20, submitted_at=1450171024),
+            fakedb.BuildRequest(id=2, buildsetid=2, buildername="bldr2", priority=20, submitted_at=1450171029, startbrid=1),
+            fakedb.BuildRequest(id=3, buildsetid=2, buildername="bldr2", priority=20, submitted_at=1450171031, startbrid=1),
+            # II Case - No child
+            fakedb.BuildRequest(id=4, buildsetid=3, buildername="bldr1", priority=20, submitted_at=1450171031),
+            # III Case - One child and one merged
+            fakedb.BuildRequest(id=5, buildsetid=4, buildername="bldr1", priority=20, submitted_at=1450171031),
+            fakedb.BuildRequest(id=6, buildsetid=4, buildername="bldr1", priority=20, submitted_at=1450171031, startbrid=5),
+            fakedb.BuildRequest(id=7, buildsetid=4, buildername="bldr1", priority=20, submitted_at=1450171031, mergebrid=5),
+            # IV Case - One child and two the same builds
+            fakedb.BuildRequest(id=8, buildsetid=5, buildername="bldr3", priority=20, submitted_at=1450171031),
+            fakedb.BuildRequest(id=9, buildsetid=5, buildername="bldr3", priority=20, submitted_at=1450171031, startbrid=8),
+        ]
+
+        build = [
+            # I Case - Two childs
+            fakedb.Build(id=50, brid=1, number=5, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=51, brid=2, number=6, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=52, brid=3, number=7, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            # II Case - No child
+            fakedb.Build(id=53, brid=4, number=8, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            # III Case - One child and one merged
+            fakedb.Build(id=54, brid=5, number=9, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=55, brid=6, number=10, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=56, brid=7, number=11, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            # IV Case - One child and two the same builds
+            fakedb.Build(id=57, brid=8, number=12, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=58, brid=8, number=12, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),
+            fakedb.Build(id=59, brid=8, number=12, start_time=1304262222, finish_time=1304262240, slavename="build-slave-02"),
+            fakedb.Build(id=60, brid=9, number=12, start_time=1304262222, finish_time=1304262240, slavename="build-slave-01"),       
+        ]
+        self.insertTestData(breqs + build)
+        expected_results = {
+            1: [1, 2, 3],
+            2: [2],
+            3: [3],
+            4: [4],
+            5: [5, 6, 7],
+            6: [6],
+            7: [7],
+            8: [8, 9],
+            9: [9],
+        }
+        for brid, expected_result in expected_results.iteritems():
+            results = yield self.db.buildrequests.getBuildChain(brid)
+
+            self.assertEqual(len(results), len(expected_result),
+                msg="Wrong result length for brid={}, got {}, expected {}".format(brid, len(results), len(expected_result)))
+            for result, expected_value in zip(results, expected_result):
+                self.assertEqual(result['id'], expected_value, msg="Wrong value for brid={}".format(brid))
 
     def checkCanceledBuildRequests(self, brlist, complete=True, results=CANCELED):
         self.assertTrue(all([br['complete'] == complete and br['results'] == results
