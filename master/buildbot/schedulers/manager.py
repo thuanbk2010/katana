@@ -39,8 +39,6 @@ class SchedulerManager(config.ReconfigurableServiceMixin,
                     return scheduler
                 elif isinstance(scheduler, scheduler_type):
                     return scheduler
-                else:
-                    continue
 
     @defer.inlineCallbacks
     def reconfigService(self, new_config):
