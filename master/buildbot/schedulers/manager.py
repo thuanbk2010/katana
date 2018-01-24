@@ -19,12 +19,26 @@ from twisted.python import log, reflect
 from buildbot.process import metrics
 from buildbot import config, util
 
+
 class SchedulerManager(config.ReconfigurableServiceMixin,
                        service.MultiService):
     def __init__(self, master):
         service.MultiService.__init__(self)
         self.setName('scheduler_manager')
         self.master = master
+
+    def findSchedulerByName(self, name):
+        for scheduler in self.services:
+            if name == scheduler.name:
+                return scheduler
+
+    def findSchedulerByBuilderName(self, builder_name, scheduler_type=None):
+        for scheduler in self.services:
+            if builder_name in scheduler.builderNames:
+                if scheduler_type is None:
+                    return scheduler
+                elif isinstance(scheduler, scheduler_type):
+                    return scheduler
 
     @defer.inlineCallbacks
     def reconfigService(self, new_config):

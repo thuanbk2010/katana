@@ -34,48 +34,40 @@ from buildbot.status.web.build import BuildsResource, StatusResourceBuild
 from buildbot import util
 import collections
 
+
 class ForceAction(ActionResource):
+
     @defer.inlineCallbacks
     def force(self, req, builderNames):
         master = self.getBuildmaster(req)
         owner = self.getAuthz(req).getUsernameFull(req)
-        schedulername = req.args.get("forcescheduler", ["<unknown>"])[0]
-        if schedulername == "<unknown>":
-            try:
-                for scheduler in master.allSchedulers():
-                    if isinstance(scheduler, ForceScheduler) and builderNames[0] in scheduler.builderNames:
-                        schedulername = scheduler.name
-                        break
-                else:
-                    raise RuntimeError("Could not find force scheduler")
-            except:
-                defer.returnValue((path_to_builder(req, self.builder_status),
-                                   "forcescheduler arg not found, and could not find a default force scheduler for builderName"))
-                return
+        scheduler_name = req.args.get("forcescheduler", ["<unknown>"])[0]
 
-        args = {}
-        # decode all of the args
-        encoding = getRequestCharset(req)
-        for name, argl in req.args.iteritems():
-           if name == "checkbox":
-               # damn html's ungeneric checkbox implementation...
-               for cb in argl:
-                   args[cb.decode(encoding)] = True
-           else:
-               args[name] = [ arg.decode(encoding) for arg in argl ]
+        args = self.decode_request_arguments(req)
 
-        for scheduler in master.allSchedulers():
-            if schedulername == scheduler.name:
-                try:
-                    yield scheduler.force(owner, builderNames, **args)
-                    msg = ""
-                except ValidationError, e:
-                    msg = html.escape(e.message.encode('ascii','ignore'))
-                break
+        if scheduler_name == "<unknown>":
+            scheduler = master.scheduler_manager.findSchedulerByBuilderName(
+                builderNames[0], scheduler_type=ForceScheduler,
+            )
+        else:
+            scheduler = master.scheduler_manager.findSchedulerByName(name=scheduler_name)
+
+        try:
+            yield scheduler.force(owner, builderNames, **args)
+        except ValidationError:
+            pass
+        except AttributeError:
+            if scheduler_name == '<unknown>':
+                defer.returnValue(
+                    (
+                        path_to_builder(req, self.builder_status),
+                        'forcescheduler arg not found, and could not find a default force scheduler for builderName',
+                    ),
+                )
 
         # send the user back to the proper page
-        returnpage = args.get("returnpage", None)
-        if  "builders" in returnpage:
+        returnpage = args.get("returnpage", {})
+        if "builders" in returnpage:
             defer.returnValue((path_to_builders(req, self.builder_status.getProject())))
         elif "builders_json" in returnpage:
             s = self.getStatus(req)
@@ -84,6 +76,20 @@ class ForceAction(ActionResource):
             s = self.getStatus(req)
             defer.returnValue((s.getBuildbotURL() + path_to_json_pending(req, builderNames[0])))
         defer.returnValue((path_to_builder(req, self.builder_status)))
+
+    @staticmethod
+    def decode_request_arguments(request):
+        args = {}
+        encoding = getRequestCharset(request)
+
+        for name, argl in request.args.iteritems():
+            if name == 'checkbox':
+                for cb in argl:
+                    args[cb.decode(encoding)] = True
+            else:
+                args[name] = [arg.decode(encoding) for arg in argl]
+
+        return args
 
 
 class ForceAllBuildsActionResource(ForceAction):

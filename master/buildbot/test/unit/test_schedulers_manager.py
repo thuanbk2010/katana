@@ -19,6 +19,7 @@ from twisted.internet import defer
 from buildbot.schedulers import manager, base
 from buildbot import config
 
+
 class SchedulerManager(unittest.TestCase):
 
     def setUp(self):
@@ -166,3 +167,54 @@ class SchedulerManager(unittest.TestCase):
         self.assertIdentical(sch1_new.master, self.master)
         self.assertIdentical(sch2.parent, self.sm)
         self.assertIdentical(sch2.master, self.master)
+
+    def test_finding_scheduler_by_name(self):
+        scheduler_manager = manager.SchedulerManager(self.master)
+
+        mocked_schedulers = [
+            mock.Mock(spec=self.Sched),
+            mock.Mock(spec=self.Sched),
+            mock.Mock(spec=self.ReconfigSched),
+            mock.Mock(spec=self.ReconfigSched),
+        ]
+
+        for index, scheduler in enumerate(mocked_schedulers):
+            scheduler.name = 'scheduler-{}'.format(index)
+            scheduler_manager.addService(scheduler)
+
+        for scheduler in mocked_schedulers:
+            self.assertEqual(scheduler_manager.findSchedulerByName(scheduler.name), scheduler)
+
+        self.assertIsNone(scheduler_manager.findSchedulerByName('not-existing-scheduler'))
+
+    def test_finding_scheduler_by_builder_name(self):
+        scheduler_manager = manager.SchedulerManager(self.master)
+
+        first_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_a', 'builder_b'])
+        scheduler_manager.addService(first_scheduler)
+
+        second_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_c', 'builder_d'])
+        scheduler_manager.addService(second_scheduler)
+
+        self.assertEqual(scheduler_manager.findSchedulerByBuilderName('builder_c'), second_scheduler)
+
+    def test_finding_scheduler_by_builder_name_filter_by_scheduler_type(self):
+        fake_scheduler_type = type('FakeScheduler', (base.BaseScheduler, ), {})
+
+        scheduler_manager = manager.SchedulerManager(self.master)
+
+        first_scheduler = mock.Mock(spec=self.Sched, builderNames=['builder_a', 'builder_b'])
+        scheduler_manager.addService(first_scheduler)
+
+        second_scheduler = mock.Mock(spec=fake_scheduler_type, builderNames=['builder_b', 'builder_c'])
+        scheduler_manager.addService(second_scheduler)
+
+        self.assertEqual(
+            scheduler_manager.findSchedulerByBuilderName('builder_b', scheduler_type=self.Sched),
+            first_scheduler,
+        )
+
+        self.assertEqual(
+            scheduler_manager.findSchedulerByBuilderName('builder_b', scheduler_type=fake_scheduler_type),
+            second_scheduler,
+        )

@@ -13,10 +13,15 @@
 #
 # Copyright Buildbot Team Members
 
+import json
+from StringIO import StringIO
+
 import mock
 
+from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.web import resource
+from twisted.web.test.requesthelper import DummyRequest
 
 from buildbot.status.web import status_json
 from buildbot.config import ProjectConfig
@@ -25,7 +30,6 @@ from buildbot.test.fake import fakemaster, fakedb
 from buildbot.status.builder import BuilderStatus, PendingBuildsCache
 from buildbot.status.build import BuildStatus
 from buildbot.status.slave import SlaveStatus
-from twisted.internet import defer
 from buildbot.status.results import SUCCESS
 from buildbot.config import BuilderConfig
 from buildbot.process.factory import BuildFactory
@@ -33,6 +37,8 @@ from buildbot.process.buildtag import BuildTag
 from buildbot.status.buildrequest import BuildRequestStatus
 from buildbot.sourcestamp import SourceStamp
 from buildbot.process.properties import Properties
+from buildbot.schedulers.forcesched import ForceScheduler
+
 
 class PastBuildsJsonResource(unittest.TestCase):
     def setUp(self):
@@ -763,3 +769,239 @@ class TestBuildNumberForRequestJsonResource(unittest.TestCase):
             build_number = yield build_number_resource.asDict(request=self.request)
 
         self.assertEqual(build_number, request_build_number)
+
+
+class TestStartBuildJsonResource(unittest.TestCase):
+
+    def setUp(self):
+        self.project = 'proj0'
+        self.builder_name = '{}-test-builder'.format(self.project)
+
+        self.builder_status = fakemaster.FakeBuilderStatus(
+            buildername=self.builder_name, project=self.project,
+        )
+
+        self.master = fakemaster.FakeMaster()
+
+        self.site = mock.Mock(
+            buildbot_service=mock.Mock(master=self.master),
+        )
+
+        self.request = DummyRequest([])
+        self.request.site = self.site
+
+        self.resource = status_json.StartBuildJsonResource(
+            self.master.status, self.builder_status,
+        )
+
+    def test_convert_sources_stamps(self):
+        sources_stamps = [
+            {
+                'repository': 'test-repository-a',
+                'revision': '59b7f8c59',
+                'branch': 'test-branch-a'
+            },
+            {
+                'repository': 'test-repository-b',
+                'revision': 'be24ef43e',
+                'branch': 'test-branch-b'
+            },
+        ]
+
+        expected_sources_stamps = {
+            'test-repository-a_branch': 'test-branch-a',
+            'test-repository-a_revision': '59b7f8c59',
+            'test-repository-b_branch': 'test-branch-b',
+            'test-repository-b_revision': 'be24ef43e',
+        }
+
+        self.assertDictEqual(
+            self.resource._convert_sources_stamps(sources_stamps),
+            expected_sources_stamps,
+        )
+
+    @defer.inlineCallbacks
+    def test_start_new_build_single_slave(self):
+        force_scheduler = mock.Mock(
+            spec=ForceScheduler,
+            force=mock.Mock(return_value=(1, {self.builder_status.name: 2})),
+        )
+        force_scheduler.name = 'force-scheduler-0 [force]'
+        self.master.scheduler_manager.addService(force_scheduler)
+
+
+
+        build_params = {
+            'owner': 'Test User <test.user@example.com>',
+            'scheduler_name': 'force-scheduler-0 [force]',
+            'sources_stamps': [
+                {
+                    'repository': 'test_repository',
+                    'branch': 'test_branch',
+                    'revision': '59b7f8c59',
+                },
+            ],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+                'reason': 'test-reason',
+            },
+        }
+        self.request.content = StringIO(json.dumps(build_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertListEqual(response, [{'build_request_id': 2}])
+
+        force_scheduler.force.assert_called_once_with(
+            'Test User <test.user@example.com>',
+            [self.builder_status.name],
+            force_chain_rebuild=True,
+            force_rebuild=True,
+            priority='50',
+            reason='test-reason',
+            scheduler_name='force-scheduler-0 [force]',
+            test_repository_branch='test_branch',
+            test_repository_revision='59b7f8c59',
+        )
+
+    @defer.inlineCallbacks
+    def test_start_new_build_multiple_slaves(self):
+        force_scheduler = mock.Mock(
+            spec=ForceScheduler,
+            force=mock.Mock(return_value=[
+                (1, {self.builder_status.name: 2}),
+                (2, {self.builder_status.name: 4}),
+            ]),
+        )
+        force_scheduler.name = 'force-scheduler-0 [force]'
+        self.master.scheduler_manager.addService(force_scheduler)
+
+        build_params = {
+            'owner': 'Test User <test.user@example.com>',
+            'scheduler_name': 'force-scheduler-0 [force]',
+            'selected_slave': 'allCompatible',
+            'sources_stamps': [{
+                'repository': 'test_repository',
+                'branch': 'test_branch',
+                'revision': '59b7f8c59',
+            }],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+            },
+        }
+        self.request.content = StringIO(json.dumps(build_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertListEqual(response, [{'build_request_id': 2}, {'build_request_id': 4}])
+
+        force_scheduler.force.assert_called_once_with(
+            'Test User <test.user@example.com>',
+            [self.builder_status.name],
+            force_chain_rebuild=True,
+            force_rebuild=True,
+            priority='50',
+            scheduler_name='force-scheduler-0 [force]',
+            selected_slave='allCompatible',
+            test_repository_branch='test_branch',
+            test_repository_revision='59b7f8c59',
+        )
+
+    @defer.inlineCallbacks
+    def test_input_schema_validation_additional_properties_forbidden(self):
+        invalid_build_params = {
+            'invalid_property': 'invalid_property_value',
+
+            'owner': 'Test User <test.user@example.com>',
+            'scheduler_name': 'force-scheduler-0 [force]',
+            'sources_stamps': [{
+                'repository': 'test_repository',
+                'branch': 'test_branch',
+                'revision': '59b7f8c59',
+            }],
+            'build_properties': {
+                'force_chain_rebuild': True,
+                'force_rebuild': True,
+                'priority': '50',
+            },
+        }
+        self.request.content = StringIO(json.dumps(invalid_build_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 400)
+        self.assertDictEqual(
+            response,
+            {'error': "Additional properties are not allowed (u'invalid_property' was unexpected)"}
+        )
+
+    @defer.inlineCallbacks
+    def test_input_schema_validation_owner_property_required(self):
+        missing_owner_build_params = {
+            'scheduler_name': 'force-scheduler-0 [force]',
+            'sources_stamps': [{
+                'repository': 'test_repository',
+                'branch': 'test_branch',
+                'revision': '59b7f8c59',
+            }],
+        }
+        self.request.content = StringIO(json.dumps(missing_owner_build_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 400)
+        self.assertDictEqual(
+            response,
+            {'error': "'owner' is a required property"}
+        )
+
+    @defer.inlineCallbacks
+    def test_input_schema_validation_sources_stamps_type_validation(self):
+        invalid_type_of_sources_stamps_params = {
+            'sources_stamps': {
+            },
+            'owner': 'Test User <test_user@example.com>',
+        }
+        self.request.content = StringIO(json.dumps(invalid_type_of_sources_stamps_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 400)
+        self.assertDictEqual(
+            response,
+            {'error': "{} is not of type 'array'"}
+        )
+
+    @defer.inlineCallbacks
+    def test_scheduler_not_found(self):
+        self.master.scheduler_manager.services = []
+
+        build_params = {
+            'owner': 'Test User <test.user@example.com>',
+            'scheduler_name': 'force-scheduler-0 [force]',
+            'sources_stamps': [{
+                'repository': 'test_repository',
+                'branch': 'test_branch',
+                'revision': '59b7f8c59',
+            }],
+        }
+        self.request.content = StringIO(json.dumps(build_params))
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 404)
+        self.assertDictEqual(response, {'error': 'Scheduler not found'})
+
+    @defer.inlineCallbacks
+    def test_invalid_json_in_payload(self):
+        invalid_json_param = '{"owner": "Test User <test.user@example.com>",}'
+        self.request.content = StringIO(invalid_json_param)
+
+        response = yield self.resource._deferred_render(self.request)
+
+        self.assertEqual(self.request.responseCode, 400)
+        self.assertDictEqual(response, {'error': 'invalid json payload'})

@@ -17,17 +17,19 @@
 """Simple JSON exporter."""
 
 import datetime
+import json
 import re
-from twisted.python import log
+import time
 
+import jsonschema
+from twisted.python import log
 from twisted.internet import defer
 from twisted.web import html, resource, server
 
+from buildbot.schedulers.forcesched import ForceScheduler
 from buildbot.status.buildrequest import BuildRequestStatus
-from buildbot.status.web.base import HtmlResource, path_to_root, map_branches, getCodebasesArg, \
+from buildbot.status.web.base import AccessorMixin, HtmlResource, path_to_root, map_branches, getCodebasesArg, \
     getRequestCharset, getResultsArg, getCodebases, path_to_comparison
-import json
-import time
 
 
 _IS_INT = re.compile(r'^[-+]?\d+$')
@@ -127,6 +129,47 @@ EXAMPLES = """\
     - Global information about the current builds and slaves in use
   - /json/build_request/<BUILD_REQUEST_ID>/build_number/
     - A build number for a build request id.
+  - /json/builders/<A_BUILDER>/start-build/
+    - Start a new build. This endpoint accepts only POST method with the JSON payload.
+    
+    - Example payload:
+    
+    - {
+
+    -    "owner": pyflakes pyflakes <pyflakes@example.com>, 
+    # (Field required)
+    -    "scheduler_name": "scheduler [force]", 
+    # (if not provided then the first force scheduler for given builder will be chosen)
+    -    "selected_slave": "slave_name",
+    # ('allCompatible' means that build will run on all slaves)
+    -    "sources_stamps": [{
+    
+    -        "branch": "test-branch",
+    
+    -        "repository": "test-repository",
+    
+    -        "revision": "5abcde"
+    
+    -    }],
+    
+    -   "build_properties": {
+    
+    -       "force_chain_rebuild": true,
+    
+    -       "force_rebuild": true,
+
+    -       "priority": "50",
+    
+    -       "reason": "description"
+    
+    - }
+
+    - This endpoint will return the one element list of build request objects,
+if 'allCompatible' was used then the list will contain build request object for all slaves.
+
+    - Example:
+    
+    - [{"build_request_id": 1}] or with 'allCompatible' [{"build_request_id": 1}, {"build_request_id": 2}]
 """
 
 
@@ -434,29 +477,139 @@ class BuilderPendingBuildsJsonResource(JsonResource):
 
 
 class BuilderJsonResource(JsonResource):
-    help = """Describe a single builder.
-"""
+    help = 'Describe a single builder.'
     pageTitle = 'Builder'
 
     def __init__(self, status, builder_status):
         JsonResource.__init__(self, status)
         self.builder_status = builder_status
         self.putChild('builds', BuildsJsonResource(status, builder_status))
-        self.putChild('slaves', BuilderSlavesJsonResources(status,
-                                                           builder_status))
-        self.putChild('startslaves', BuilderStartSlavesJsonResources(status,
-                                                           builder_status))
-        self.putChild(
-            'pendingBuilds',
-            BuilderPendingBuildsJsonResource(status, builder_status))
+        self.putChild('slaves', BuilderSlavesJsonResources(status, builder_status))
+        self.putChild('startslaves', BuilderStartSlavesJsonResources(status, builder_status))
+        self.putChild('pendingBuilds', BuilderPendingBuildsJsonResource(status, builder_status))
+        self.putChild('start-build', StartBuildJsonResource(status, builder_status))
 
     def asDict(self, request):
         # buildbot.status.builder.BuilderStatus
-        builder_dict = self.builder_status.asDict_async(codebases=getCodebases(request=request),
-                                                        request=request)
+        builder_dict = self.builder_status.asDict_async(
+            codebases=getCodebases(request=request), request=request,
+        )
 
         return builder_dict
 
+
+class StartBuildJsonResource(AccessorMixin, resource.Resource):
+    help = 'Start a new build'
+    isLeaf = True
+    pageTitle = 'Start a new build'
+    schema = {
+        'type': 'object',
+        'properties': {
+            'owner': {'type': 'string'},
+            'scheduler_name': {'type': 'string', 'pattern': r'^\S+ (\[force\])$'},
+            'selected_slave': {'type': 'string'},
+            'sources_stamps': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'branch': {'type': 'string'},
+                        'repository': {'type': 'string'},
+                        'revision': {'type': 'string'},
+                    },
+                    'required': ['branch', 'repository', 'revision'],
+                },
+            },
+            'build_properties': {
+                'type': 'object',
+            }
+        },
+        'additionalProperties': False,
+        'required': ['owner'],
+    }
+
+    def __init__(self, status, builder_status):
+        resource.Resource.__init__(self)
+        self.level = 1
+        self.status = status
+        self.builder_status = builder_status
+
+    def render_POST(self, request):
+        d = self._deferred_render(request)
+
+        def request_succeed(data):
+            request.setHeader('content-type', 'application/json')
+            data = json.dumps(data)
+            request.write(data)
+            request.finish()
+
+        def request_failed(f):
+            log.err(f, 'Connection from {} lost'.format(request.client.host))
+
+        d.addCallback(request_succeed)
+        request.notifyFinish().addErrback(request_failed)
+
+        return server.NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _deferred_render(self, request):
+        master = self.getBuildmaster(request)
+
+        try:
+            request_data = json.load(request.content)
+        except ValueError:
+            request.setResponseCode(400)
+            defer.returnValue({'error': 'invalid json payload'})
+
+        try:
+            jsonschema.validate(instance=request_data, schema=self.schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            request.setResponseCode(400)
+            defer.returnValue({'error': exc.message})
+
+        if 'scheduler_name' in request_data:
+            scheduler = master.scheduler_manager.findSchedulerByName(request_data['scheduler_name'])
+        else:
+            scheduler = master.scheduler_manager.findSchedulerByBuilderName(
+                self.builder_status.name, scheduler_type=ForceScheduler,
+            )
+
+        sources_stamps = request_data.pop('sources_stamps', [])
+        request_data.update(self._convert_sources_stamps(sources_stamps))
+
+        try:
+            owner = request_data.pop('owner')
+            build_properties = request_data.pop('build_properties', {})
+            request_data.update(build_properties)
+
+            scheduler_output = yield scheduler.force(owner, [self.builder_status.name], **request_data)
+        except AttributeError:
+            request.setResponseCode(404)
+            defer.returnValue({'error': 'Scheduler not found'})
+        else:
+            if isinstance(scheduler_output, tuple):
+                build_set_id, build_request = scheduler_output
+                defer.returnValue([{'build_request_id': build_request[self.builder_status.name]}])
+            else:
+                result = []
+                for d in scheduler_output:
+                    build_set_id, build_request = yield d
+                    result.append({'build_request_id': build_request[self.builder_status.name]})
+                defer.returnValue(result)
+
+    @staticmethod
+    def _convert_sources_stamps(sources_stamps):
+        converted_sources_stamps = {}
+
+        for source_stamp in sources_stamps:
+            repository = source_stamp['repository']
+            revision = source_stamp['revision']
+            branch = source_stamp['branch']
+
+            converted_sources_stamps['{}_revision'.format(repository)] = revision
+            converted_sources_stamps['{}_branch'.format(repository)] = branch
+
+        return converted_sources_stamps
 
 
 class BuildersJsonResource(JsonResource):
