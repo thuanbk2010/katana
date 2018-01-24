@@ -15,6 +15,7 @@
 
 from twisted.application import service
 
+
 class FakeBotMaster(service.MultiService):
     def __init__(self, master):
         service.MultiService.__init__(self)
@@ -44,3 +45,11 @@ class FakeBotMaster(service.MultiService):
 
     def maybeStartBuildsForSlave(self, slavename):
         self.buildsStartedForSlaves.append(slavename)
+
+    def getBuilderConfig(self, name):
+        return FakeProject(name=name)
+
+
+class FakeProject:
+    def __init__(self, name):
+        self.project = 'project_' + name

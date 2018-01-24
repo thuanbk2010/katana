@@ -12,29 +12,32 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Copyright Buildbot Team Members
-
+from datetime import timedelta, datetime
 from twisted.trial import unittest
 from twisted.internet import defer, task
 from buildbot.db import builds
+from buildbot.status import build
+from buildbot.test.fake.botmaster import FakeBotMaster
 from buildbot.test.util import connector_component
-from buildbot.test.fake import fakedb
+from buildbot.test.fake import fakedb, fakemaster
 from buildbot.util import epoch2datetime
 from buildbot.status.results import SUCCESS
 
-class TestBuildsConnectorComponent(
-            connector_component.ConnectorComponentMixin,
-            unittest.TestCase):
 
+class TestBuildsConnectorComponent(
+    connector_component.ConnectorComponentMixin,
+    unittest.TestCase):
     SUBMITTED_AT_EPOCH = 298297875
     COMPLETE_AT_EPOCH = 329920275
 
     def setUp(self):
         d = self.setUpConnectorComponent(
             table_names=['builds', 'buildrequests', 'buildsets',
-                'sourcestamps', 'sourcestampsets', 'patches' ])
+                         'sourcestamps', 'sourcestampsets', 'patches'])
 
         def finish_setup(_):
             self.db.builds = builds.BuildsConnectorComponent(self.db)
+
         d.addCallback(finish_setup)
 
         return d
@@ -72,20 +75,24 @@ class TestBuildsConnectorComponent(
         d = self.insertTestData(self.background_data + [
             fakedb.Build(id=50, brid=42, number=5, start_time=1304262222),
         ])
-        d.addCallback(lambda _ :
-                self.db.builds.getBuild(50))
+        d.addCallback(lambda _:
+                      self.db.builds.getBuild(50))
+
         def check(bdict):
             self.assertEqual(bdict, dict(bid=50, number=5, brid=42,
-                start_time=epoch2datetime(1304262222), finish_time=None))
+                                         start_time=epoch2datetime(1304262222), finish_time=None))
+
         d.addCallback(check)
         return d
 
     def test_getBuild_missing(self):
         d = defer.succeed(None)
-        d.addCallback(lambda _ :
-                self.db.builds.getBuild(50))
+        d.addCallback(lambda _:
+                      self.db.builds.getBuild(50))
+
         def check(bdict):
             self.assertEqual(bdict, None)
+
         d.addCallback(check)
         return d
 
@@ -94,18 +101,20 @@ class TestBuildsConnectorComponent(
             fakedb.Build(id=50, brid=42, number=5, start_time=1304262222),
             fakedb.Build(id=51, brid=41, number=6, start_time=1304262223),
             fakedb.Build(id=52, brid=42, number=7, start_time=1304262224,
-                                                  finish_time=1304262235),
+                         finish_time=1304262235),
         ])
-        d.addCallback(lambda _ :
-                self.db.builds.getBuildsForRequest(42))
+        d.addCallback(lambda _:
+                      self.db.builds.getBuildsForRequest(42))
+
         def check(bdicts):
             self.assertEqual(sorted(bdicts), sorted([
                 dict(bid=50, number=5, brid=42,
-                    start_time=epoch2datetime(1304262222), finish_time=None),
+                     start_time=epoch2datetime(1304262222), finish_time=None),
                 dict(bid=52, number=7, brid=42,
-                    start_time=epoch2datetime(1304262224),
-                    finish_time=epoch2datetime(1304262235)),
+                     start_time=epoch2datetime(1304262224),
+                     finish_time=epoch2datetime(1304262235)),
             ]))
+
         d.addCallback(check)
         return d
 
@@ -113,16 +122,19 @@ class TestBuildsConnectorComponent(
         clock = task.Clock()
         clock.advance(1302222222)
         d = self.insertTestData(self.background_data)
-        d.addCallback(lambda _ :
-                self.db.builds.addBuild(brid=41, number=119, slavename="slave-01", _reactor=clock))
+        d.addCallback(lambda _:
+                      self.db.builds.addBuild(brid=41, number=119, slavename="slave-01", _reactor=clock))
+
         def check(_):
             def thd(conn):
                 r = conn.execute(self.db.model.builds.select())
-                rows = [ (row.brid, row.number, row.start_time,
-                          row.finish_time) for row in r.fetchall() ]
+                rows = [(row.brid, row.number, row.start_time,
+                         row.finish_time) for row in r.fetchall()]
                 self.assertEqual(rows,
-                    [ (41, 119, 1302222222, None) ])
+                                 [(41, 119, 1302222222, None)])
+
             return self.db.pool.do(thd)
+
         d.addCallback(check)
         return d
 
@@ -135,19 +147,22 @@ class TestBuildsConnectorComponent(
             fakedb.Build(id=51, brid=42, number=5, start_time=1304262222),
             fakedb.Build(id=52, brid=42, number=6, start_time=1304262222),
         ])
-        d.addCallback(lambda _ :
-                self.db.builds.finishBuilds([50,51], _reactor=clock))
+        d.addCallback(lambda _:
+                      self.db.builds.finishBuilds([50, 51], _reactor=clock))
+
         def check(_):
             def thd(conn):
                 r = conn.execute(self.db.model.builds.select())
-                rows = [ (row.id, row.brid, row.number, row.start_time,
-                          row.finish_time) for row in r.fetchall() ]
+                rows = [(row.id, row.brid, row.number, row.start_time,
+                         row.finish_time) for row in r.fetchall()]
                 self.assertEqual(sorted(rows), [
                     (50, 41, 5, 1304262222, 1305555555),
                     (51, 42, 5, 1304262222, 1305555555),
                     (52, 42, 6, 1304262222, None),
                 ])
+
             return self.db.pool.do(thd)
+
         d.addCallback(check)
         return d
 
@@ -157,29 +172,32 @@ class TestBuildsConnectorComponent(
 
         d = self.insertTestData(self.background_data + [
             fakedb.Build(id=nn, brid=41, number=nn, start_time=1304262222)
-            for nn in xrange(50,200)
+            for nn in xrange(50, 200)
         ])
-        d.addCallback(lambda _ :
-                self.db.builds.finishBuilds(range(50,200), _reactor=clock))
+        d.addCallback(lambda _:
+                      self.db.builds.finishBuilds(range(50, 200), _reactor=clock))
+
         def check(_):
             def thd(conn):
                 r = conn.execute(self.db.model.builds.select())
-                rows = [ (row.id, row.brid, row.number, row.start_time,
-                          row.finish_time) for row in r.fetchall() ]
+                rows = [(row.id, row.brid, row.number, row.start_time,
+                         row.finish_time) for row in r.fetchall()]
                 self.assertEqual(sorted(rows), [
                     (nn, 41, nn, 1304262222, 1305555555)
-                    for nn in xrange(50,200)
+                    for nn in xrange(50, 200)
                 ])
+
             return self.db.pool.do(thd)
+
         d.addCallback(check)
         return d
 
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersCodeBasesFound(self):
-        yield  self.insertTestData(self.last_builds)
+        yield self.insertTestData(self.last_builds)
 
         sourcestamps_filter = [{'b_codebase': '1', 'b_branch': 'master'},
-                          {'b_codebase': '2', 'b_branch': 'staging'}]
+                               {'b_codebase': '2', 'b_branch': 'staging'}]
 
         lastBuildNumber = yield self.db.builds.getLastBuildsNumbers(buildername="builder",
                                                                     sourcestamps=sourcestamps_filter, num_builds=1)
@@ -188,10 +206,10 @@ class TestBuildsConnectorComponent(
 
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersCodeBasesNotFound(self):
-        yield  self.insertTestData(self.last_builds)
+        yield self.insertTestData(self.last_builds)
 
         sourcestamps_filter = [{'b_codebase': '1', 'b_branch': 'development'},
-                          {'b_codebase': '2', 'b_branch': 'qa'}]
+                               {'b_codebase': '2', 'b_branch': 'qa'}]
 
         lastBuildNumber = yield self.db.builds.getLastBuildsNumbers(buildername="builder",
                                                                     sourcestamps=sourcestamps_filter, num_builds=1)
@@ -200,7 +218,7 @@ class TestBuildsConnectorComponent(
 
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersOneFilter(self):
-        yield  self.insertTestData(self.last_builds)
+        yield self.insertTestData(self.last_builds)
 
         sourcestamps_filter = [{'b_codebase': '1', 'b_branch': 'master'}]
 
@@ -212,21 +230,21 @@ class TestBuildsConnectorComponent(
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersMultipleBuilds(self):
         builds = [fakedb.BuildRequest(id=2, buildsetid=2, buildername="builder",
-                                       complete=1, results=0,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Buildset(id=2, sourcestampsetid=2),
-                   fakedb.SourceStampSet(id=2),
-                   fakedb.SourceStamp(id=3, revision='a', codebase='1',
-                                      sourcestampsetid=2, branch='master', repository='z'),
-                   fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
-                                      branch='development', repository='w'),
-                   fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH)]
-        yield  self.insertTestData(self.last_builds + builds)
+                                      complete=1, results=0,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Buildset(id=2, sourcestampsetid=2),
+                  fakedb.SourceStampSet(id=2),
+                  fakedb.SourceStamp(id=3, revision='a', codebase='1',
+                                     sourcestampsetid=2, branch='master', repository='z'),
+                  fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
+                                     branch='development', repository='w'),
+                  fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH)]
+        yield self.insertTestData(self.last_builds + builds)
 
         sourcestamps_filter = [{'b_codebase': '1', 'b_branch': 'master'},
-                          {'b_codebase': '2', 'b_branch': 'qa'}]
+                               {'b_codebase': '2', 'b_branch': 'qa'}]
 
         lastBuildNumber = yield self.db.builds.getLastBuildsNumbers(buildername="builder",
                                                                     sourcestamps=sourcestamps_filter, num_builds=4)
@@ -236,18 +254,18 @@ class TestBuildsConnectorComponent(
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersFilterBranchResults(self):
         builds = [fakedb.BuildRequest(id=2, buildsetid=2, buildername="builder",
-                                       complete=1, results=4,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Buildset(id=2, sourcestampsetid=2),
-                   fakedb.SourceStampSet(id=2),
-                   fakedb.SourceStamp(id=3, revision='a', codebase='1',
-                                      sourcestampsetid=2, branch='master', repository='z'),
-                   fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
-                                      branch='development', repository='w'),
-                   fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH)]
-        yield  self.insertTestData(self.last_builds + builds)
+                                      complete=1, results=4,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Buildset(id=2, sourcestampsetid=2),
+                  fakedb.SourceStampSet(id=2),
+                  fakedb.SourceStamp(id=3, revision='a', codebase='1',
+                                     sourcestampsetid=2, branch='master', repository='z'),
+                  fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
+                                     branch='development', repository='w'),
+                  fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH)]
+        yield self.insertTestData(self.last_builds + builds)
 
         sourcestamps_filter = [{'b_branch': 'master'}, {'b_branch': 'qa'}]
 
@@ -293,19 +311,19 @@ class TestBuildsConnectorComponent(
         for idx, b in enumerate(builds):
             rowid = idx + 1
             recent_builds += [fakedb.BuildRequest(id=rowid, buildsetid=rowid, buildername=b['buildername'],
-                                                 complete=1, results=SUCCESS,
-                                                 submitted_at=b['submitted_at'],
-                                                 complete_at=b['complete_at']),
-                             fakedb.Buildset(id=rowid, sourcestampsetid=rowid),
-                             fakedb.SourceStampSet(id=rowid),
-                             fakedb.SourceStamp(id=rowid, revision=b['revision'], codebase='1',
-                                                sourcestampsetid=rowid, branch='master', repository='z'),
-                            fakedb.Build(id=rowid, number=rowid, brid=rowid,
-                                         start_time=b['submitted_at'],
-                                         finish_time=b['complete_at'],
-                                         slavename=b['slavename'])
-                             ]
-        yield  self.insertTestData(recent_builds)
+                                                  complete=1, results=SUCCESS,
+                                                  submitted_at=b['submitted_at'],
+                                                  complete_at=b['complete_at']),
+                              fakedb.Buildset(id=rowid, sourcestampsetid=rowid),
+                              fakedb.SourceStampSet(id=rowid),
+                              fakedb.SourceStamp(id=rowid, revision=b['revision'], codebase='1',
+                                                 sourcestampsetid=rowid, branch='master', repository='z'),
+                              fakedb.Build(id=rowid, number=rowid, brid=rowid,
+                                           start_time=b['submitted_at'],
+                                           finish_time=b['complete_at'],
+                                           slavename=b['slavename'])
+                              ]
+        yield self.insertTestData(recent_builds)
 
     @defer.inlineCallbacks
     def test_getLastBuildsNumbersOrderByCompleted(self):
@@ -317,24 +335,24 @@ class TestBuildsConnectorComponent(
     @defer.inlineCallbacks
     def test_getLastsBuildsNumbersBySlave(self):
         builds = [fakedb.BuildRequest(id=2, buildsetid=2, buildername="builder1",
-                                       complete=1, results=0,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Buildset(id=2, sourcestampsetid=2),
-                   fakedb.SourceStampSet(id=2),
-                   fakedb.SourceStamp(id=3, revision='a', codebase='1',
-                                      sourcestampsetid=2, branch='master', repository='z'),
-                   fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
-                                      branch='development', repository='w'),
-                   fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-01'),
-                   fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2",
-                                       complete=1, results=0,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Build(id=3, number=5, brid=3, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-02')]
-        yield  self.insertTestData(self.last_builds + builds)
+                                      complete=1, results=0,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Buildset(id=2, sourcestampsetid=2),
+                  fakedb.SourceStampSet(id=2),
+                  fakedb.SourceStamp(id=3, revision='a', codebase='1',
+                                     sourcestampsetid=2, branch='master', repository='z'),
+                  fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
+                                     branch='development', repository='w'),
+                  fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-01'),
+                  fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2",
+                                      complete=1, results=0,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Build(id=3, number=5, brid=3, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-02')]
+        yield self.insertTestData(self.last_builds + builds)
 
         lastBuildNumber = yield self.db.builds.getLastsBuildsNumbersBySlave(slavename='slave-01')
         self.assertEqual(lastBuildNumber, {'builder': [4], 'builder1': [3]})
@@ -345,24 +363,24 @@ class TestBuildsConnectorComponent(
     @defer.inlineCallbacks
     def test_getLastsBuildsNumbersBySlaveFilterResults(self):
         builds = [fakedb.BuildRequest(id=2, buildsetid=2, buildername="builder1",
-                                       complete=1, results=4,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Buildset(id=2, sourcestampsetid=2),
-                   fakedb.SourceStampSet(id=2),
-                   fakedb.SourceStamp(id=3, revision='a', codebase='1',
-                                      sourcestampsetid=2, branch='master', repository='z'),
-                   fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
-                                      branch='development', repository='w'),
-                   fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-01'),
-                   fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2",
-                                       complete=1, results=7,
-                                       submitted_at=self.SUBMITTED_AT_EPOCH,
-                                       complete_at=self.COMPLETE_AT_EPOCH),
-                   fakedb.Build(id=3, number=5, brid=3, start_time=self.SUBMITTED_AT_EPOCH,
-                                finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-02')]
-        yield  self.insertTestData(self.last_builds + builds)
+                                      complete=1, results=4,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Buildset(id=2, sourcestampsetid=2),
+                  fakedb.SourceStampSet(id=2),
+                  fakedb.SourceStamp(id=3, revision='a', codebase='1',
+                                     sourcestampsetid=2, branch='master', repository='z'),
+                  fakedb.SourceStamp(id=4, revision='b', codebase='4', sourcestampsetid=2,
+                                     branch='development', repository='w'),
+                  fakedb.Build(id=2, number=3, brid=2, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-01'),
+                  fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2",
+                                      complete=1, results=7,
+                                      submitted_at=self.SUBMITTED_AT_EPOCH,
+                                      complete_at=self.COMPLETE_AT_EPOCH),
+                  fakedb.Build(id=3, number=5, brid=3, start_time=self.SUBMITTED_AT_EPOCH,
+                               finish_time=self.COMPLETE_AT_EPOCH, slavename='slave-02')]
+        yield self.insertTestData(self.last_builds + builds)
 
         lastBuildNumber = yield self.db.builds.getLastsBuildsNumbersBySlave(slavename='slave-01', results=[0, 4])
         self.assertEqual(lastBuildNumber, {'builder': [4], 'builder1': [3]})
@@ -376,3 +394,75 @@ class TestBuildsConnectorComponent(
 
         builds = yield self.db.builds.getLastsBuildsNumbersBySlave(slavename="slave-01")
         self.assertEquals(builds, {'builder-01': [3], 'builder': [2, 4]})
+
+
+class TestGetLastBuildsOwnedBy(
+    connector_component.ConnectorComponentMixin,
+    unittest.TestCase
+):
+
+    def setUp(self):
+        d = self.setUpConnectorComponent(
+            table_names=['builds', 'buildrequests', 'buildsets', 'sourcestamps', 'sourcestampsets', 'patches', 'buildset_properties']
+        )
+        self.master = fakemaster.make_master(wantDb=True, testcase='Tests for getTopBuildUrl method')
+
+        def finish_setup(_):
+            self.db.builds = builds.BuildsConnectorComponent(self.db)
+            self.mybuild_limit = self.db.builds.NUMBER_OF_REQUESTED_BUILDS
+
+        d.addCallback(finish_setup)
+
+        return d
+
+    def tearDown(self):
+        return self.tearDownConnectorComponent()
+
+    @staticmethod
+    def _collect_ids(builds, attribute):
+        return sorted([item[attribute] for item in builds])
+
+    @defer.inlineCallbacks
+    def test_results_are_correctly_limited_by_builds_count(self):
+        builds_count = self.mybuild_limit + 10
+        example_data = [
+            fakedb.Buildset(id=2, sourcestampsetid=2, reason='[ first_user ]'),
+            fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2", complete=1, results=7),
+        ] + [
+            fakedb.Build(id=i, number=i+2, brid=3, slavename='slave-02')
+            for i in xrange(builds_count)
+        ]
+        yield self.insertTestData(example_data)
+
+        first_user_builds = yield self.db.builds.getLastBuildsOwnedBy("first_user", FakeBotMaster(self.master))
+        self.assertEqual(len(first_user_builds), self.mybuild_limit)
+        self.assertEqual(self._collect_ids(first_user_builds, 'builds_id'), range(self.mybuild_limit))
+
+    @defer.inlineCallbacks
+    def test_results_are_correctly_filtered_for_user(self):
+        first_user_builds_count = 15
+        second_user_builds_count = 30
+        second_user_max_build_id = first_user_builds_count + second_user_builds_count
+
+        example_data = [
+            fakedb.Buildset(id=2, sourcestampsetid=2, reason='[ first_user ]'),
+            fakedb.Buildset(id=3, sourcestampsetid=2, reason='[ second_user ]'),
+
+            fakedb.BuildRequest(id=3, buildsetid=2, buildername="builder2", complete=1, results=7),
+            fakedb.BuildRequest(id=4, buildsetid=3, buildername="builder3", complete=1, results=7),
+        ] + [
+            fakedb.Build(id=i, number=i+2, brid=3, slavename='slave-02')
+            for i in xrange(first_user_builds_count)
+        ] + [
+            fakedb.Build(id=i, number=i + 2, brid=4, slavename='slave-02')
+            for i in xrange(first_user_builds_count, second_user_max_build_id)
+        ]
+
+        yield self.insertTestData(example_data)
+
+        second_user_builds = yield self.db.builds.getLastBuildsOwnedBy("second_user", FakeBotMaster(self.master))
+        self.assertEqual(len(second_user_builds), second_user_builds_count)
+        self.assertEqual(
+            self._collect_ids(second_user_builds, 'builds_id'),
+            range(first_user_builds_count, second_user_max_build_id)
+        )
