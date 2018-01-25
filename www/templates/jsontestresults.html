@@ -26,8 +26,25 @@
                 </div>
 
                 {% if suite.error %}
-                    <div class="failure"> suite.error</div>
+                    <div class="failure">{{ suite.error }}</div>
                 {% endif %}
+
+                {% if suite.failureReasons %}
+                <div>
+                    {% for error in suite.failureReasons %}
+                        <div class="failure">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if suite.errors %}
+                <div>
+                    {% for error in suite.errors %}
+                        <div class="failure">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
             {% endif %}
 
             {% if suite.artifacts %}
@@ -103,13 +120,22 @@
                                 <div><b>Message:</b></div>
                                 <div class="formatted-text"><pre>{{ test.message }}</pre></div>
                             {% endif %}
+
                             {% if test.stackTrace %}
                                 <div><b>Stack trace:</b></div>
                                 <div class="formatted-text"><pre>{{ test.stackTrace }}</pre></div>
                             {% endif %}
+
                             {% if test.reason %}
                                 <div><b>Reason:</b></div>
                                 <div class="formatted-text"><pre>{{ test.reason }}</pre></div>
+                            {% endif %}
+
+                            {% if test.errors %}
+                                <div><b>Other errors:</b></div>
+                                {% for error in test.errors %}
+                                    <div class="formatted-text"><pre>{{ error }}</pre></div>
+                                {% endfor %}
                             {% endif %}
                         </td>
                         {% set test_state = results[test.state] if test.state in results else 'unknown'%}
