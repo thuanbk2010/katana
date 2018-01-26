@@ -419,6 +419,18 @@ class TestForceScheduler(scheduler.SchedulerMixin, ConfigErrorsMixin, unittest.T
                 klass=ChoiceStringParameter, choices=['t1','t2'],
                 multiple=True, debug=False)
 
+    def test_WhenRequestDoesNotContainValueAndItIsReadonly_ThenPropertyIsNotAssigned(self):
+        self.do_ParameterTest(req=dict(reason='because'),
+                expect={},
+                expectKind=dict,
+                klass=IntParameter,
+                readonly=True)
+
+    def test_WhenRequestContainsValueAndPropertyIsReadonly_ThenPropertyIsAssignedWithValue(self):
+        self.do_ParameterTest(value=['42'],
+                expect=42,
+                klass=IntParameter,
+                readonly=True)
 
     def test_NestedParameter(self):
         fields = [
