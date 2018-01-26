@@ -95,8 +95,6 @@ class BaseParameter(object, ComparableMixin):
         if len(args) == 0:
             if self.required:
                 raise ValidationError("'%s' needs to be specified" % (self.label))
-            if self.readonly:
-                return None
             if self.multiple:
                 args = self.default
             else:
@@ -123,9 +121,9 @@ class BaseParameter(object, ComparableMixin):
 
     def updateFromKwargs(self, properties, kwargs, **unused):
         """Primary entry point to turn 'kwargs' into 'properties'"""
-        value = self.getFromKwargs(kwargs)
-        if value is not None:
-            properties[self.name] = value
+        if self.readonly and self.fullName not in kwargs:
+            return
+        properties[self.name] = self.getFromKwargs(kwargs)
 
     def parse_from_args(self, l):
         """Secondary customization point, called from getFromKwargs to turn
