@@ -218,6 +218,8 @@ def buildForceContextForSingleFieldWithValue(default_props, scheduler, field, ma
         if choices and value not in choices:
             value = choices[0]
         default_props[pname+".choices"] = choices
+    elif "bool" in field.type:
+        value = value is True or value == 'True'
     elif isinstance(value, unicode):
         # filter out unicode chars, and html stuff
         value = html.escape(value.encode('utf-8','ignore'))
