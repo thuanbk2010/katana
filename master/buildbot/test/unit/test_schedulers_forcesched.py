@@ -363,14 +363,22 @@ class TestForceScheduler(scheduler.SchedulerMixin, ConfigErrorsMixin, unittest.T
 
     def test_BooleanParameter_True(self):
         req = dict(p1=True,reason='because')
-        self.do_ParameterTest(value="123", expect=True, klass=BooleanParameter,
-                req=req)
+        self.do_ParameterTest(expect=True, klass=BooleanParameter, req=req)
+
+
+    def test_WhenBooleanParameterIsStringTrue_ThenPropertyIsSetToTrue(self):
+        req = dict(p1='True',reason='because')
+        self.do_ParameterTest(expect=True, klass=BooleanParameter, req=req)
+
+
+    def test_WhenBooleanParameterIsRandomString_ThenPropertyIsSetToFalse(self):
+        req = dict(p1='Foobar',reason='because')
+        self.do_ParameterTest(expect=False, klass=BooleanParameter, req=req)
 
 
     def test_BooleanParameter_False(self):
         req = dict(p2=True,reason='because')
-        self.do_ParameterTest(value="123", expect=False,
-                klass=BooleanParameter, req=req)
+        self.do_ParameterTest(expect=False, klass=BooleanParameter, req=req)
 
 
     def test_UserNameParameter(self):
