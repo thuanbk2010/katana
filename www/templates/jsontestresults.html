@@ -3,49 +3,62 @@
 {% block suites %}
    <div class="content container">
     {% for suite in data.suites %}
-
-        {% set additionalCommandLineArguments = '' %}
-        {% if suite.minimalCommandLine %}
-            {% set additionalCommandLineArguments = suite.minimalCommandLine|join(" ") %}
-        {% endif %}
-
-        {% if suite.summary.result %}
-            <div class="row">
-                <h4>Suite type: {{ suite.name }}
-                     {% if suite.description %}
-                        {{ suite.description }}
-                     {% endif %}
-                </h4>
-                {% if suite.details %}
-                    <h4>{{ suite.details }}</h4>
-                {% endif %}
-                {% if data.utrPrefix %}
-                    <a class="label label-default collapse" data-target="#suiteCommand{{ loop.index }}">Command to run locally</a>
-
-                    <div id="suiteCommand{{ loop.index }}" class="report-command">
-                        <input class="report-command-text" type="text" value="{{ data.utrPrefix }} --suite={{ suite.name }} {{ additionalCommandLineArguments }}" onclick="this.select();" readonly/>
-                    </div>
-                {% endif %}
-            </div>
-
-            {% if suite.error %}
-                <div class="failure"> suite.error</div>
-            {% endif %}
-        {% endif %}
-
-        {% if suite.artifacts %}
-            <div class="row" id="suite_artifacts">
-                <h4>Suite Artifacts:</h4>
-
-                <div class="clearfix"></div>
-                {% for artifact in suite.artifacts %}
-                    <div class="artifact">
-                        <a target="_blank" href="{{ join(path_to_artifacts, artifact).replace("\\","/") }}">{{ basename(artifact.replace("\\","/")) }}</a>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
         <div class="table-holder">
+            {% set additionalCommandLineArguments = '' %}
+            {% if suite.minimalCommandLine %}
+                {% set additionalCommandLineArguments = suite.minimalCommandLine|join(" ") %}
+            {% endif %}
+
+            {% if suite.summary.result %}
+                <div class="row">
+                    <h4>Suite type: {{ suite.name }}
+                         {% if suite.description %}
+                            {{ suite.description }}
+                         {% endif %}
+                    </h4>
+                    {% if data.utrPrefix %}
+                        <a class="label label-default collapse" data-target="#suiteCommand{{ loop.index }}">Command to run locally</a>
+
+                        <div id="suiteCommand{{ loop.index }}" class="report-command">
+                            <input class="report-command-text" type="text" value="{{ data.utrPrefix }} --suite={{ suite.name }} {{ additionalCommandLineArguments }}" onclick="this.select();" readonly/>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if suite.error %}
+                    <div class="failure">{{ suite.error }}</div>
+                {% endif %}
+
+                {% if suite.failureReasons %}
+                <div>
+                    {% for error in suite.failureReasons %}
+                        <div class="failure">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if suite.errors %}
+                <div>
+                    {% for error in suite.errors %}
+                        <div class="failure">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+            {% endif %}
+
+               {% if suite.artifacts %}
+               <div class="row" id="suite_artifacts">
+                    <h4>Suite Artifacts:</h4>
+
+                    <div class="clearfix"></div>
+                    {% for artifact in suite.artifacts %}
+                        <div class="artifact">
+                            <a target="_blank" href="{{ join(path_to_artifacts, artifact).replace("\\","/") }}">{{ basename(artifact.replace("\\","/")) }}</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
             <div class="row">
                 <ul class="summary-list">
                     <li><b id="Tests">Tests </b>{{ suite.summary.testsCount }}</li>
@@ -107,13 +120,22 @@
                                 <div><b>Message:</b></div>
                                 <div class="formatted-text"><pre>{{ test.message }}</pre></div>
                             {% endif %}
+
                             {% if test.stackTrace %}
                                 <div><b>Stack trace:</b></div>
                                 <div class="formatted-text"><pre>{{ test.stackTrace }}</pre></div>
                             {% endif %}
+
                             {% if test.reason %}
                                 <div><b>Reason:</b></div>
                                 <div class="formatted-text"><pre>{{ test.reason }}</pre></div>
+                            {% endif %}
+
+                            {% if test.errors %}
+                                <div><b>Other errors:</b></div>
+                                {% for error in test.errors %}
+                                    <div class="formatted-text"><pre>{{ error }}</pre></div>
+                                {% endfor %}
                             {% endif %}
                         </td>
                         {% set test_state = results[test.state] if test.state in results else 'unknown'%}
