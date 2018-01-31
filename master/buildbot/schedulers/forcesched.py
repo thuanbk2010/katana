@@ -121,6 +121,8 @@ class BaseParameter(object, ComparableMixin):
 
     def updateFromKwargs(self, properties, kwargs, **unused):
         """Primary entry point to turn 'kwargs' into 'properties'"""
+        if self.readonly and self.fullName not in kwargs:
+            return
         properties[self.name] = self.getFromKwargs(kwargs)
 
     def parse_from_args(self, l):

@@ -1415,6 +1415,8 @@ For help on any sub directory, use url /child/help
             return
         EXAMPLES = EXAMPLES.replace('<A_BUILDER>', builder.getName())
         build = builder.getBuild(-1)
+        if not build:
+            return
         projects = self.status.getProjects().keys()
         if len(projects) > 0:
             EXAMPLES = EXAMPLES.replace('<A_PROJECT>', projects[0])
