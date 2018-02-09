@@ -341,6 +341,7 @@ class StatusResourceBuilder(HtmlResource, BuildLineMixin):
         url = self.status.getBuildbotURL() + path_to_json_project_builder(req, project, self.builder_status.name)
         cxt['instant_json']['project'] = {"url": url,
                                           "data": json.dumps(project_dict, separators=(',', ':')),
+                                          "tags": project_dict['tags'],
                                           "waitForPush": self.status.master.config.autobahn_push,
                                           "pushFilters": {
                                               "buildStarted": filters,
@@ -395,7 +396,6 @@ class StatusResourceBuilder(HtmlResource, BuildLineMixin):
         cxt['instant_json']["start_slaves"] = self.getSlavesJsonResource(filters, url, startslaves_dict)
 
         cxt['numbuilds'] = int(req.args.get('numbuilds', [self.numbuilds])[0])
-
         buildForceContext(cxt, req, self.getBuildmaster(req), b.getName())
         template = req.site.buildbot_service.templates.get_template("builder.html")
         defer.returnValue(template.render(**cxt))
@@ -633,7 +633,6 @@ class BuildersResource(HtmlResource):
                                                "stepStarted": filters,
                                                "stepFinished": filters,
                                            }}
-
 
         template = req.site.buildbot_service.templates.get_template("builders.html")
         defer.returnValue(template.render(**cxt))

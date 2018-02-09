@@ -31,7 +31,17 @@
     <div class="head-2">{{ description }}</div>
 
     {% endif %}
-     
+
+      <h2 class="head-2">
+        Tags
+      </h2>
+
+      <div class="form-group">
+        {% for tag in instant_json.project.tags %}
+            <span class="label label-info">{{ tag }}</span>
+        {% endfor %}
+      </div>
+
       <h2 class="head-2">
         Current Builds
       </h2>

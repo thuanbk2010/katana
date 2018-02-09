@@ -213,6 +213,7 @@ class StatusResourceBuild(HtmlResource):
         builder = self.build_status.getBuilder()
         cxt['builder'] = builder
         cxt['builder_name'] = builder.getFriendlyName()
+        cxt['builder_tags'] = builder.tags
         cxt['build_number'] = b.getNumber()
         cxt['builder_name_link'] = urllib.quote(self.build_status.getBuilder().getName(), safe='')
         cxt['b'] = b
@@ -382,7 +383,6 @@ class StatusResourceBuild(HtmlResource):
         cxt['chained_build'] = yield req.site.buildbot_service.master.db.buildrequests.getBuildChain(
             self.build_status.buildChainID,
         )
-
         template = req.site.buildbot_service.templates.get_template("build.html")
         defer.returnValue(template.render(**cxt))
 
